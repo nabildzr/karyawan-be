@@ -38,6 +38,18 @@ export const paginatedResponse = <T>(
 /**
  * Error response wrapper
  */
+export const successResponse = ({data, message}: {data?: any, message?: string}) => {
+  return {
+    success: true as const,
+    data,
+    message,
+    error: null,
+  };
+};
+
+/**
+ * Error response wrapper
+ */
 export const errorResponse = (message: string, error?: string) => {
   return {
     success: false as const,
@@ -45,6 +57,7 @@ export const errorResponse = (message: string, error?: string) => {
     error,
   };
 };
+
 
 /**
  * Get Error from catch
