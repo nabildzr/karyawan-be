@@ -13,6 +13,22 @@ export const usernameFromEmail = (email: string): string => {
 };
 
 /**
+ * Validasi apakah email valid (mengandung @ dan .)
+ */
+export const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+/**
+ * Validasi apakah nomor telepon valid (hanya angka)
+ */
+export const isValidPhoneNumber = (phone: string): boolean => {
+  const phoneRegex = /^\d+$/;
+  return phoneRegex.test(phone);
+};
+
+/**
  * Sleep helper untuk async operations
  */
 export const sleep = (ms: number): Promise<void> => {

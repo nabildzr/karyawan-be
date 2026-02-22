@@ -8,15 +8,15 @@ export const AuthService = {
       where: { nip: data.nip },
     });
 
-    if (!user) throw new Error("NIP atau Password salah.");
+    if (!user) throw new Error("Bad Request: NIP atau Password salah.");
 
     // verifikasi hash cryptography
     const isPasswordValid = await verify(user.password, data.password);
-    if (!isPasswordValid) throw new Error("NIP atau Password salah.");
+    if (!isPasswordValid) throw new Error("Bad Request: NIP atau Password salah.");
 
     // gate keeper: klo akses dari web tapi dia bkn admin, drop it
-    if (data.clientType === "WEB" && user.role !== "ADMIN") {
-      throw new Error("Akses Web Portal hanya diperuntukkan untuk Administrator.");
+    if (data.clientType === "WEB" && !["ADMIN", "CEO", "MANAGER", "HR"].includes(user.role)) {
+      throw new Error("Forbidden: Akses Web Portal hanya diperuntukkan untuk Administrator.");
     }
 
     return {

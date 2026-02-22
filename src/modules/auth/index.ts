@@ -43,10 +43,18 @@ export const authRoutes = new Elysia({
 
         set.status = HttpStatusEnum.HTTP_200_OK;
         return successResponse({ data: { token }, message: "Login berhasil" });
-      } catch (error) {
+      } catch (error: any) {
         console.error("Login error:", error);
-        set.status = 401;
-        return errorResponse("Login gagal");
+
+        if (error.message.startsWith("Bad Request"))
+          set.status = HttpStatusEnum.HTTP_400_BAD_REQUEST;
+        else if (error.message.startsWith("Not Found"))
+          set.status = HttpStatusEnum.HTTP_404_NOT_FOUND;
+        else if (error.message.startsWith("Forbidden"))
+          set.status = HttpStatusEnum.HTTP_403_FORBIDDEN;
+        else set.status = HttpStatusEnum.HTTP_500_INTERNAL_SERVER_ERROR;
+
+        return errorResponse(error.message.split(": ")[1] || "Terjadi kesalahan saat login.");
       }
     },
     {

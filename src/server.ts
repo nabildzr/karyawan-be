@@ -4,6 +4,7 @@ import { authPlugin } from "./middleware/auth";
 import { RootHandler } from "./modules/root";
 import { authRoutes } from "./modules/auth";
 import { constants } from "./config/constants";
+import { employeeRoutes } from "./modules/employees";
 
 
 // ROUTES
@@ -21,6 +22,7 @@ server_v1
   .use(authRoutes)
 
   // & PROTECTED ROUTES — setiap route menentukan level akses sendiri via beforeHandle
+  .use(employeeRoutes)
  
   // Swagger Documentation
   .use(
