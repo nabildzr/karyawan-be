@@ -18,7 +18,7 @@ async function verifyJWT(token: string, secret: string): Promise<JWTPayload> {
   return payload as unknown as JWTPayload;
 }
 
-// & ============ Auth Plugin ============
+// & ============ Auth Plugin (WITH HYBRID TOKEN ) ============
 /**
  * Elysia plugin yang meng-derive `auth` context dari Bearer token.
  * TIDAK memblokir request tanpa token (auth = null).
@@ -26,18 +26,29 @@ async function verifyJWT(token: string, secret: string): Promise<JWTPayload> {
  */
 export const authPlugin = new Elysia({ name: "auth-plugin" }).derive(
   { as: "scoped" },
-  async ({ headers }): Promise<{ auth: JWTPayload | null }> => {
+  async ({
+    headers,
+    cookie: { auth_session },
+  }): Promise<{ auth: JWTPayload | null }> => {
+    let token = "";
     const authHeader = headers.authorization;
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return { auth: null };
+    // ? skenario mobile (flutter): cek header bearer
+    if (authHeader?.startsWith("Bearer ")) {
+      token = authHeader.slice(7);
     }
 
+    // ? skenario web (nextjs): cek HTTP-Only Cookie
+    else if (auth_session?.value) {
+      token = auth_session.value as string;
+    }
+
+    // ? klo token ada, verifikasi pake jose
     try {
-      const token = authHeader.slice(7);
       const payload = await verifyJWT(token, constants.auth.jwtSecret);
       return { auth: payload };
     } catch {
+      // ? token expired ato invalid signature
       return { auth: null };
     }
   },
