@@ -1,4 +1,6 @@
 import { Elysia } from "elysia";
+import { PrismaClient } from "./generated/prisma/client";
+
 
 const app = new Elysia().get("/", () => "Hello Elysia").listen(3000);
 

@@ -1,0 +1,344 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+generator prismabox {
+  provider                    = "prismabox"
+  typeboxImportDependencyName = "elysia"
+  typeboxImportVariableName   = "t"
+  additionalProperties        = true
+  inputModel                  = true
+  output                      = "../src/generated/prismabox"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ROLE {
+  CEO
+  MANAGER
+  HR
+  ADMIN
+  USER
+}
+
+enum AttendanceStatus {
+  PRESENT // Hadir tepat waktu
+  LATE // Telat
+  ABSENT // Alpa / Gak masuk
+  LEAVE // Izin / Cuti
+  OFF // Memang jadwalnya libur
+}
+
+model Users {
+  id        String   @id @default(uuid())
+  nip       String   @unique
+  password  String
+  role      ROLE     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees   Employees[]
+  attendances Attendances[]
+  userBadges  UserBadges[]
+  points      Points[]
+  userFaces   UserFaces?
+}
+
+model Positions {
+  id        String      @id @default(uuid())
+  name      String
+  gajiPokok Int
+  // gajiPokok Decimal     @db.Decimal(15, 2)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  employees Employees[]
+}
+
+model Employees {
+  id       String  @id @default(uuid())
+  fullName String
+  address  String?
+
+  email       String? @unique
+  phoneNumber String? @unique
+
+  userId String
+  user   Users  @relation(references: [id], fields: [userId])
+
+  positionId String?
+  position   Positions? @relation(references: [id], fields: [positionId])
+
+  // scheduleId String?
+  // schedule   Schedules? @relation(references: [id], fields: [scheduleId])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employeeDetails    EmployeeDetails[]
+  attendances        Attendances[]
+  // shiftSchedulePivots     ShiftSchedulePivot[]
+  workingSchedules   WorkingSchedules? @relation(fields: [workingSchedulesId], references: [id])
+  workingSchedulesId String?
+}
+
+// Pivot: Shift <-> Schedule
+// model ShiftSchedulePivot {
+//   id         String    @id @default(uuid())
+//   employeeId String
+//   employee   Employees @relation(fields: [employeeId], references: [id])
+//   shiftId    String
+//   shift      Shifts    @relation(fields: [shiftId], references: [id])
+//   scheduleId String
+//   schedule   Schedules @relation(fields: [scheduleId], references: [id])
+//   createdAt  DateTime  @default(now())
+//   updatedAt  DateTime  @updatedAt
+// }
+
+model EmployeeDetails {
+  employeeId        String    @id
+  employee          Employees @relation(fields: [employeeId], references: [id])
+  dateOfBirth       DateTime? @db.Date
+  placeOfBirth      String?
+  gender            String?
+  maritalStatus     String?
+  religion          String?
+  profilePictureUrl String?
+  bankName          String?
+  bankAccountNumber String?
+  hireDate          DateTime? @db.Date
+  employmentType    String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+// // Tunjangan berdasarkan jabatan
+// model PositionAllowances {
+//   id        String   @id @default(uuid())
+//   amount    Int
+//   // amount    Decimal  @db.Decimal(15, 2)
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   positionId String
+//   position   Positions @relation(fields: [positionId], references: [id])
+
+//   positionAllowancePivots PositionAllowancePivot[]
+// }
+
+// // Pivot: Tunjangan Jabatan <-> Karyawan
+// model PositionAllowancePivot {
+//   id         String    @id @default(uuid())
+//   employeeId String
+
+//   positionAllowanceId String
+//   positionAllowance   PositionAllowances @relation(references: [id], fields: [positionAllowanceId])
+
+//   givenAt   DateTime?
+//   notes     String?
+//   createdAt DateTime  @default(now())
+//   updatedAt DateTime  @updatedAt
+// }
+
+// // Tunjangan individual (bonus, dll)
+// model EmployeeAllowances {
+//   id        String   @id @default(uuid())
+//   name      String
+//   amount    Int
+//   // amount    Decimal  @db.Decimal(15, 2)
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   employeeAllowancePivots EmployeeAllowancePivot[]
+// }
+
+// // Pivot: Tunjangan Individual <-> Karyawan
+// model EmployeeAllowancePivot {
+//   id         String    @id @default(uuid())
+//   employeeId String
+
+//   employeeAllowanceId String
+//   employeeAllowance   EmployeeAllowances @relation(references: [id], fields: [employeeAllowanceId])
+
+//   givenAt   DateTime?
+//   notes     String?
+//   createdAt DateTime  @default(now())
+//   updatedAt DateTime  @updatedAt
+// }
+
+// Lokasi geofence untuk absensi
+model Geofences {
+  id          String        @id @default(uuid())
+  name        String
+  latitude    Decimal       @db.Decimal(10, 7)
+  longitude   Decimal       @db.Decimal(10, 7)
+  radius      Int // dalam meter
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  attendances Attendances[]
+}
+
+// 
+// 
+// 
+// 
+// 
+//  JADWAL KERJA
+// 
+// 
+
+model Shifts {
+  id        String   @id @default(uuid())
+  name      String // Misal: "Shift Pagi", "Normal Day"
+  startTime String // "08:00"
+  endTime   String // "17:00"
+  createdAt DateTime @default(now())
+
+  // Relasi ke detail hari
+  scheduleDays ScheduleDays[]
+}
+
+model WorkingSchedules {
+  id        String   @id @default(uuid())
+  name      String // Misal: "Jadwal Operasional Kantor"
+  createdAt DateTime @default(now())
+
+  days      ScheduleDays[]
+  employees Employees[]
+}
+
+model ScheduleDays {
+  id        String  @id @default(uuid())
+  dayOfWeek String // "Monday", "Tuesday", dsb
+  isActive  Boolean @default(true) // Untuk handle toggle Enable/Disable di UI
+
+  // Relasi ke Master Shift
+  shiftId String? // Nullable kalau isActive: false
+  shift   Shifts? @relation(fields: [shiftId], references: [id])
+
+  workingScheduleId String
+  workingSchedule   WorkingSchedules @relation(fields: [workingScheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([workingScheduleId, dayOfWeek])
+}
+
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+
+// Jadwal absensi user
+// model Schedules {
+//   id         String   @id @default(uuid())
+//   name       String? // contoh: "Jadwal 1"
+//   daysOfWeek String // contoh: "Mon,Tue,Wed,Thu,Fri"
+//   createdAt  DateTime @default(now())
+//   updatedAt  DateTime @updatedAt
+
+//   // shiftSchedulePivots ShiftSchedulePivot[]
+//   employees Employees[]
+// }
+
+// Data absensi
+model Attendances {
+  id         String    @id @default(uuid())
+  employeeId String
+  employee   Employees @relation(fields: [employeeId], references: [id])
+
+  shiftNameSnapshot        String // Misal: "Pagi"
+  expectedCheckInSnapshot  DateTime // Jam masuk yang seharusnya (diambil dari Shift saat itu)
+  expectedCheckOutSnapshot DateTime? // Jam pulang yang seharusnya
+
+  // DATA SNAPSHOT (Waktu sesuai jadwal)
+  shiftStartTimeSnapshot DateTime  @db.Time() // Jam mulai shift (snapshot)
+  shiftEndTimeSnapshot   DateTime? @db.Time() // Jam selesai shift (snapshot)
+
+  // REAL DATA (Waktu aslinya)
+  checkIn  DateTime?
+  checkOut DateTime?
+
+  // Lokasi absensi (nama tempat)
+  deviceInfo String? @db.Text
+
+  // Metode absensi: FACE_RECOGNITION 
+  checkInPhoto  String? @db.Text
+  checkOutPhoto String? @db.Text
+
+  // Status absensi: PRESENT, LATE, ABSENT, LEAVE, OFF
+  status AttendanceStatus @default(OFF)
+
+  latitudeCheckInSnapshot  Decimal? @db.Decimal(10, 7) // lokasi absensi check in
+  longitudeCheckInSnapshot Decimal? @db.Decimal(10, 7) // lokasi absensi check in
+
+  latitudeCheckOutSnapshot  Decimal? @db.Decimal(10, 7) // lokasi absensi check out
+  longitudeCheckOutSnapshot Decimal? @db.Decimal(10, 7) // lokasi absensi check out
+
+  radiusSnapshot Int? // radius geofence saat absensi
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  geofences Geofences? @relation(fields: [geofencesId], references: [id])
+
+  geofencesId String?
+  users       Users?  @relation(fields: [usersId], references: [id])
+  usersId     String?
+}
+
+model UserFaces {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   Users  @relation(fields: [userId], references: [id])
+
+  // Data wajah dalam bentuk Binary (BLOB/ByteA)
+  faceData Bytes @db.ByteA
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Badge/lencana untuk gamifikasi
+model Badges {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userBadges UserBadges[]
+}
+
+// Pivot: User <-> Badge
+model UserBadges {
+  id        String   @id @default(uuid())
+  userId    String
+  user      Users    @relation(fields: [userId], references: [id])
+  badgeId   String
+  badge     Badges   @relation(fields: [badgeId], references: [id])
+  awardedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+}
+
+// Poin untuk gamifikasi
+model Points {
+  id        String   @id @default(uuid())
+  userId    String
+  user      Users    @relation(fields: [userId], references: [id])
+  points    Int
+  reason    String // alasan pemberian poin
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
