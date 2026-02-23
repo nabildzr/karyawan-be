@@ -5,6 +5,8 @@ import { RootHandler } from "./modules/root";
 import { authRoutes } from "./modules/auth";
 import { constants } from "./config/constants";
 import { employeeRoutes } from "./modules/employees";
+import { faceRoutes } from "./modules/faces";
+import { attendanceRoutes } from "./modules/attendances";
 
 
 // ROUTES
@@ -23,6 +25,8 @@ server_v1
 
   // & PROTECTED ROUTES — setiap route menentukan level akses sendiri via beforeHandle
   .use(employeeRoutes)
+  .use(faceRoutes)
+  .use(attendanceRoutes)
  
   // Swagger Documentation
   .use(
