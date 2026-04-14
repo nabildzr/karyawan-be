@@ -1,0 +1,85 @@
+// * File ini adalah facade orchestrator untuk module attendances.
+
+import {
+  correctAttendance,
+  exportAttendances,
+  getAll,
+  getById,
+  getSummaryStats,
+  manualAttendance,
+} from "./admin-report.service";
+import { findBlockingSubmission } from "./blocking-submission.service";
+import { checkIn, checkOut } from "./check.service";
+import {
+  generateBlipCaption,
+  verifyFace,
+  verifyFaceForAttendance,
+} from "./face.service";
+import { calculateStreak, calculateWorkingDays, getHistory } from "./history.service";
+import { getTodayContext } from "./today-context.service";
+
+export const AttendanceService = {
+  // & Check blocking submission in date range.
+  // % Cek pengajuan yang memblokir absensi di rentang tanggal.
+  findBlockingSubmission,
+
+  // & Get current day attendance context.
+  // % Ambil konteks absensi hari ini.
+  getTodayContext,
+
+  // & Perform employee check-in.
+  // % Jalankan check-in karyawan.
+  checkIn,
+
+  // & Perform employee check-out.
+  // % Jalankan check-out karyawan.
+  checkOut,
+
+  // & Create manual attendance entry.
+  // % Buat entri absensi manual.
+  manualAttendance,
+
+  // & Correct existing attendance record.
+  // % Koreksi data absensi yang sudah ada.
+  correctAttendance,
+
+  // & Get attendance history list.
+  // % Ambil daftar riwayat absensi.
+  getHistory,
+
+  // & Calculate employee working days.
+  // % Hitung hari kerja karyawan.
+  calculateWorkingDays,
+
+  // & Calculate attendance streak.
+  // % Hitung streak kehadiran.
+  calculateStreak,
+
+  // & Verify face match for attendance.
+  // % Verifikasi kecocokan wajah untuk absensi.
+  verifyFaceForAttendance,
+
+  // & Generate BLIP caption for accessory detection flow.
+  // % Generate caption BLIP untuk alur deteksi aksesori.
+  generateBlipCaption,
+
+  // & Verify face and return confidence payload.
+  // % Verifikasi wajah dan kembalikan payload confidence.
+  verifyFace,
+
+  // & Get attendance list for admin report.
+  // % Ambil daftar absensi untuk laporan admin.
+  getAll,
+
+  // & Get attendance detail by id.
+  // % Ambil detail absensi berdasarkan id.
+  getById,
+
+  // & Get attendance summary stats.
+  // % Ambil statistik ringkasan absensi.
+  getSummaryStats,
+
+  // & Export attendance report.
+  // % Ekspor laporan absensi.
+  exportAttendances,
+};

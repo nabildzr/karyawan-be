@@ -1,0 +1,579 @@
+// * File schema database: prisma/schema.prisma
+// & This schema defines identity, RBAC, HR, attendance, submission, and audit domains.
+// % Schema ini mendefinisikan domain identitas, RBAC, HR, absensi, pengajuan, dan audit.
+
+// & Prisma client generators used by backend runtime and validation types.
+// % Generator Prisma client yang dipakai runtime backend dan tipe validasi.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+generator prismabox {
+  provider                    = "prismabox"
+  typeboxImportDependencyName = "elysia"
+  typeboxImportVariableName   = "t"
+  additionalProperties        = true
+  inputModel                  = true
+  output                      = "../src/generated/prismabox"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// & Shared enums used by RBAC and attendance-related models.
+// % Enum bersama yang dipakai model RBAC dan model terkait absensi.
+
+enum PermissionAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  APPROVE
+}
+
+enum AttendanceStatus {
+  PRESENT // Hadir tepat waktu
+  LATE // Telat
+  ABSENT // Alpa / Gak masuk
+  LEAVE // Izin / Cuti
+  OFF // Memang jadwalnya libur
+}
+
+// & Core identity and RBAC authorization models.
+// % Model inti identitas user dan otorisasi RBAC.
+
+model Users {
+  id        String   @id @default(uuid())
+  nip       String   @unique
+  password  String
+  rbacRoleId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rbacRole RbacRoles? @relation(fields: [rbacRoleId], references: [id])
+
+  managedDivisions Divisions[]   @relation("DivisionManager")
+  evaluationsGiven Assessments[] @relation("EvaluatorRelation")
+
+  employees   Employees?
+  userBadges  UserBadges[]
+  points      Points[]
+  userFaces   UserFaces?
+  submissions Submissions[]
+  manualEntryAttendances Attendances[] @relation("ManualEntryBy")
+}
+
+model RbacRoles {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  name      String
+  isSystem  Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  canAccessAdmin Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       Users[]
+  permissions RolePermissionActions[]
+}
+
+model PermissionResources {
+  id              String   @id @default(uuid())
+  key             String   @unique
+  name            String
+  routePath       String?
+  groupName       String?
+  supportsApprove Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  permissions RolePermissionActions[]
+}
+
+model RolePermissionActions {
+  id         String           @id @default(uuid())
+  roleId     String
+  resourceId String
+  action     PermissionAction
+  isAllowed  Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  role     RbacRoles           @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  resource PermissionResources @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, resourceId, action])
+  @@index([roleId])
+  @@index([resourceId])
+}
+
+model Positions {
+  id        String @id @default(uuid())
+  name      String
+  gajiPokok Int
+
+  // Untuk menentukan level akses (e.g., Supervisor ke atas)
+  isManagerial Boolean @default(false)
+
+  // gajiPokok Decimal     @db.Decimal(15, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  //? satu divisi
+  divisionId String?
+  division   Divisions? @relation(fields: [divisionId], references: [id])
+
+  employees Employees[]
+}
+
+model Divisions {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  managerId String? @unique
+  manager   Users?  @relation("DivisionManager", fields: [managerId], references: [id])
+
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  positions Positions[]
+}
+
+model Employees {
+  id       String  @id @default(uuid())
+  fullName String
+  address  String?
+
+  email       String? @unique
+  phoneNumber String? @unique
+
+  joinDate DateTime @default(now())
+
+  userId String @unique
+  user   Users  @relation(references: [id], fields: [userId])
+
+  positionId String?
+  position   Positions? @relation(references: [id], fields: [positionId])
+
+  // scheduleId String?
+  // schedule   Schedules? @relation(references: [id], fields: [scheduleId])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  evaluationsReceived Assessments[] @relation("EvaluateeRelation")
+
+  employeeDetails    EmployeeDetails[]
+  attendances        Attendances[]
+  // shiftSchedulePivots     ShiftSchedulePivot[]
+  workingSchedules   WorkingSchedules? @relation(fields: [workingSchedulesId], references: [id])
+  workingSchedulesId String?
+}
+
+// Pivot: Shift <-> Schedule
+// model ShiftSchedulePivot {
+//   id         String    @id @default(uuid())
+//   employeeId String
+//   employee   Employees @relation(fields: [employeeId], references: [id])
+//   shiftId    String
+//   shift      Shifts    @relation(fields: [shiftId], references: [id])
+//   scheduleId String
+//   schedule   Schedules @relation(fields: [scheduleId], references: [id])
+//   createdAt  DateTime  @default(now())
+//   updatedAt  DateTime  @updatedAt
+// }
+
+model EmployeeDetails {
+  employeeId        String    @id
+  employee          Employees @relation(fields: [employeeId], references: [id])
+  dateOfBirth       DateTime? @db.Date
+  placeOfBirth      String?
+  gender            String?
+  maritalStatus     String?
+  religion          String?
+  profilePictureUrl String?
+  bankName          String?
+  bankAccountNumber String?
+  hireDate          DateTime? @db.Date
+  employmentType    String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+// & Assessment performance models used by evaluator workflow.
+// % Model penilaian kinerja yang dipakai alur evaluator.
+
+model AssessmentCategories {
+  id          String  @id @default(uuid())
+  name        String // "Kerja Sama", "Inisiatif", "Kedisiplinan"
+  description String? @db.Text
+  type        String? // Buat filter: "Employee", "Managerial"
+  isActive    Boolean @default(true)
+
+  // Fitur Rahasia (Req #4): Admin bisa nentuin nilai ini boleh diliat bawahan atau nggak
+  isVisibleToEmployee Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assessmentDetails AssessmentDetails[]
+}
+
+model Assessments {
+  id String @id @default(uuid())
+
+  // Siapa yang menilai (Manager / HRD) -> Relasi ke tabel Users
+  evaluatorId String
+  evaluator   Users  @relation("EvaluatorRelation", fields: [evaluatorId], references: [id])
+
+  // Siapa yang dinilai (Bawahan / Staff) -> Relasi ke tabel Employees
+  evaluateeId String
+  evaluatee   Employees @relation("EvaluateeRelation", fields: [evaluateeId], references: [id])
+
+  assessmentDate DateTime @db.Date
+  period         String // "Minggu 1 Jan 2026", "Q1 2026", "Semester 1"
+  generalNotes   String?  @db.Text // Kesimpulan / Feedback text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  details AssessmentDetails[]
+}
+
+model AssessmentDetails {
+  id String @id @default(uuid())
+
+  assessmentId String
+  assessment   Assessments @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   AssessmentCategories @relation(fields: [categoryId], references: [id])
+
+  categoryName String // Snapshot nama kategori saat penilaian dibuat (biar gak berubah walaupun kategori diubah kemudian)
+
+  // Pake Decimal biar bisa ngasih nilai 4.5 atau 8.5
+  score Decimal @db.Decimal(5, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Biar 1 form penilaian gak ada kategori yang dobel/diisi dua kali
+  @@unique([assessmentId, categoryId])
+}
+
+// & Geofence model used as attendance location boundary source.
+// % Model geofence yang dipakai sebagai sumber batas lokasi absensi.
+
+// // Tunjangan berdasarkan jabatan
+// model PositionAllowances {
+//   id        String   @id @default(uuid())
+//   amount    Int
+//   // amount    Decimal  @db.Decimal(15, 2)
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   positionId String
+//   position   Positions @relation(fields: [positionId], references: [id])
+
+//   positionAllowancePivots PositionAllowancePivot[]
+// }
+
+// // Pivot: Tunjangan Jabatan <-> Karyawan
+// model PositionAllowancePivot {
+//   id         String    @id @default(uuid())
+//   employeeId String
+
+//   positionAllowanceId String
+//   positionAllowance   PositionAllowances @relation(references: [id], fields: [positionAllowanceId])
+
+//   givenAt   DateTime?
+//   notes     String?
+//   createdAt DateTime  @default(now())
+//   updatedAt DateTime  @updatedAt
+// }
+
+// // Tunjangan individual (bonus, dll)
+// model EmployeeAllowances {
+//   id        String   @id @default(uuid())
+//   name      String
+//   amount    Int
+//   // amount    Decimal  @db.Decimal(15, 2)
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   employeeAllowancePivots EmployeeAllowancePivot[]
+// }
+
+// // Pivot: Tunjangan Individual <-> Karyawan
+// model EmployeeAllowancePivot {
+//   id         String    @id @default(uuid())
+//   employeeId String
+
+//   employeeAllowanceId String
+//   employeeAllowance   EmployeeAllowances @relation(references: [id], fields: [employeeAllowanceId])
+
+//   givenAt   DateTime?
+//   notes     String?
+//   createdAt DateTime  @default(now())
+//   updatedAt DateTime  @updatedAt
+// }
+
+model Geofences {
+  id                  String        @id @default(uuid())
+  name                String
+  latitude            Decimal       @db.Decimal(10, 7)
+  longitude           Decimal       @db.Decimal(10, 7)
+  radius              Int // dalam meter
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  attendancesCheckIn  Attendances[] @relation("AttendanceCheckIn")
+  attendancesCheckOut Attendances[] @relation("AttendanceCheckOut")
+}
+
+// & Submission enums and models used by employee request workflow.
+// % Enum dan model pengajuan yang dipakai alur request karyawan.
+enum SubmissionType {
+  IZIN_SAKIT
+  IZIN_KHUSUS
+  DINAS_LUAR
+  LEMBUR
+  GANTI_SHIFT_HARI
+}
+
+enum SubmissionStatus {
+  PENDING // Menunggu (Warna Kuning/Abu)
+  APPROVED // Disetujui (Warna Hijau)
+  REJECTED // Ditolak (Warna Merah)
+}
+
+// ==========================================
+// & MODEL PENGAJUAN
+// ==========================================
+model Submissions {
+  id     String @id @default(uuid())
+  userId String
+
+  // Data dari Form Karyawan
+  type       SubmissionType // Dropdown "Tipe Pengajuan"
+  startDate  DateTime // "Tanggal Mulai"
+  endDate    DateTime // "Tanggal Selesai"
+  reason     String         @db.Text // Text Area "Alasan"
+  attachment String? // URL file lampiran di Cloudinary
+  attachmentPublicId String? // public_id Cloudinary untuk kebutuhan cleanup saat delete
+  attachmentOriginalName String?
+  attachmentMimeType String?
+  attachmentSizeBytes Int?
+
+  // Data dari HRD / Sistem
+  status          SubmissionStatus @default(PENDING) // Status awal selalu PENDING
+  rejectionReason String?          @db.Text // Alasan kalau ditolak HRD
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relasi ke tabel Users yang udah lu punya
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// & Work schedule models for shift templates and per-day schedule mapping.
+// % Model jadwal kerja untuk template shift dan mapping jadwal per hari.
+
+model Shifts {
+  id        String @id @default(uuid())
+  name      String // Misal: "Shift Pagi", "Normal Day"
+  startTime String // "08:00"
+  endTime   String // "17:00"
+
+  isCrossDay Boolean  @default(false) // Untuk handle shift yang melewati tengah malam
+  createdAt  DateTime @default(now())
+
+  // Relasi ke detail hari
+  // workingScheduleId String?
+  // workingSchedule   WorkingSchedules? @relation(fields: [workingScheduleId], references: [id], onDelete: Cascade)
+
+  scheduleDays ScheduleDays[]
+}
+
+model WorkingSchedules {
+  id        String   @id @default(uuid())
+  name      String // Misal: "Jadwal Operasional Kantor"
+  createdAt DateTime @default(now())
+
+  days      ScheduleDays[]
+  // shifts    Shifts[]
+  employees Employees[]
+}
+
+model ScheduleDays {
+  id        String  @id @default(uuid())
+  dayOfWeek String // "Monday", "Tuesday", dsb
+  isActive  Boolean @default(true) // Untuk handle toggle Enable/Disable di UI
+
+  // Relasi ke Master Shift
+  shiftId String? // Nullable kalau isActive: false
+  shift   Shifts? @relation(fields: [shiftId], references: [id])
+
+  workingScheduleId String
+  workingSchedule   WorkingSchedules @relation(fields: [workingScheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([workingScheduleId, dayOfWeek])
+}
+
+model PublicHolidays {
+  id        String   @id @default(uuid())
+  name      String
+  date      DateTime @unique @db.Date
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// & Attendance and audit models for presence records and traceability.
+// % Model absensi dan audit untuk pencatatan kehadiran serta jejak perubahan.
+
+// Jadwal absensi user
+// model Schedules {
+//   id         String   @id @default(uuid())
+//   name       String? // contoh: "Jadwal 1"
+//   daysOfWeek String // contoh: "Mon,Tue,Wed,Thu,Fri"
+//   createdAt  DateTime @default(now())
+//   updatedAt  DateTime @updatedAt
+
+//   // shiftSchedulePivots ShiftSchedulePivot[]
+//   employees Employees[]
+// }
+
+// Data absensi
+model Attendances {
+  id         String    @id @default(uuid())
+  employeeId String
+  employee   Employees @relation(fields: [employeeId], references: [id])
+
+  shiftNameSnapshot        String // Misal: "Pagi"
+  expectedCheckInSnapshot  DateTime // Jam masuk yang seharusnya (diambil dari Shift saat itu)
+  expectedCheckOutSnapshot DateTime? // Jam pulang yang seharusnya
+
+  // // DATA SNAPSHOT (Waktu sesuai jadwal)
+  // shiftStartTimeSnapshot DateTime  @db.Time() // Jam mulai shift (snapshot)
+  // shiftEndTimeSnapshot   DateTime? @db.Time() // Jam selesai shift (snapshot)
+
+  // REAL DATA (Waktu aslinya)
+  checkIn  DateTime?
+  checkOut DateTime?
+
+  isManualEntry    Boolean   @default(false) // tandain ini manual atau otomatis
+  manualReason    String? // "Forgot clock-in", "Technical issue", dll
+  manualNotes     String?   @db.Text // Additional notes dari UI
+  manualEntryBy   String? // userId admin yang input
+  manualEntryAt   DateTime? // kapan admin input ini
+  manualEntryByRole String? // snapshot role admin saat entry dilakukan
+
+  // Relasi ke admin yang input
+  manualEntryUser Users? @relation("ManualEntryBy", fields: [manualEntryBy], references: [id])
+
+  // Lokasi absensi (nama tempat)
+  deviceInfo String? @db.Text
+
+  // Metode absensi: FACE_RECOGNITION 
+  checkInPhoto  String? @db.Text
+  checkOutPhoto String? @db.Text
+
+  // Status absensi: PRESENT, LATE, ABSENT, LEAVE, OFF
+  status         AttendanceStatus  @default(OFF)
+  statusCheckOut AttendanceStatus? // Status saat check out (bisa null kalau belum check out)
+
+  latitudeCheckInSnapshot  Decimal? @db.Decimal(10, 7) // lokasi absensi check in
+  longitudeCheckInSnapshot Decimal? @db.Decimal(10, 7) // lokasi absensi check in
+
+  latitudeCheckOutSnapshot  Decimal? @db.Decimal(10, 7) // lokasi absensi check out
+  longitudeCheckOutSnapshot Decimal? @db.Decimal(10, 7) // lokasi absensi check out
+
+  radiusCheckInSnapshot  Int? // radius geofence saat check-in
+  radiusCheckOutSnapshot Int? // radius geofence saat check-out
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  geofencesId String?
+
+  geofences Geofences? @relation("AttendanceCheckIn", fields: [geofencesId], references: [id])
+
+  geofencesCheckOutId String?
+
+  geofencesCheckOut Geofences? @relation("AttendanceCheckOut", fields: [geofencesCheckOutId], references: [id])
+}
+
+model AuditLogs {
+  id        String   @id @default(uuid())
+  action    String // Misal: "UPDATE_ATTENDANCE_MANUAL"
+  entity    String // Misal: "Attendances"
+  entityId  String // ID dari data absensi yang diedit
+  userId    String // ID si Admin HRD yang ngedit
+  userRole  String // Misal: "ADMIN"
+  changes   Json // Nyimpen data sebelum & sesudah diedit { before: {...}, after: {...} }
+  reason    String? // Alasan ngedit: "HP karyawan mati, diwakilin"
+  createdAt DateTime @default(now())
+}
+
+// model AuditLogs {
+//   id          String   @id @default(uuid())
+//   action      String   // Aksi spesifik, misal: "APPROVE_SUBMISSION", "REJECT_SUBMISSION"
+//   entity      String   // Nama tabel yang diubah, misal: "Submissions" atau "Attendances"
+//   entityId    String   // ID unik dari baris data yang diubah
+//   userId      String   // ID Admin/HR yang ngelakuin aksi
+//   userRole    String   // Peran user, misal: "ADMIN", "MANAGER"
+//   changes     Json     // Data JSON sebelum & sesudah diubah
+//   reason      String?  // Catatan opsional / alasan penolakan
+//   createdAt   DateTime @default(now())
+// }
+
+model UserFaces {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   Users  @relation(fields: [userId], references: [id])
+
+  // Data wajah dalam bentuk Binary (BLOB/ByteA)
+  faceData Bytes @db.ByteA
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// & Gamification models for badges and points.
+// % Model gamifikasi untuk badge dan poin.
+model Badges {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userBadges UserBadges[]
+}
+
+// & Pivot model connecting users with awarded badges.
+// % Model pivot yang menghubungkan user dengan badge yang diberikan.
+model UserBadges {
+  id        String   @id @default(uuid())
+  userId    String
+  user      Users    @relation(fields: [userId], references: [id])
+  badgeId   String
+  badge     Badges   @relation(fields: [badgeId], references: [id])
+  awardedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+}
+
+// & Point history model for user reward tracking.
+// % Model riwayat poin untuk pelacakan reward user.
+model Points {
+  id        String   @id @default(uuid())
+  userId    String
+  user      Users    @relation(fields: [userId], references: [id])
+  points    Int
+  reason    String // alasan pemberian poin
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
