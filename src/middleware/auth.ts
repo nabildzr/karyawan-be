@@ -1,3 +1,7 @@
+// * Backend module: karyawan-be/src/middleware/auth.ts
+// & This file defines backend logic for auth.ts.
+// % File ini mendefinisikan logika backend untuk auth.ts.
+
 import Elysia from "elysia";
 import * as jose from "jose";
 import { constants } from "../config/constants";
@@ -50,6 +54,7 @@ const ADMIN_RESOURCE_ROUTE_MAP: Array<{
   { apiPrefix: "/working-schedules", resourceKey: "working_schedules" },
   { apiPrefix: "/rbac", resourceKey: "rbac" },
   { apiPrefix: "/assessments", resourceKey: "assessments" },
+  { apiPrefix: "/points/admin", resourceKey: "points" },
 ];
 
 function unauthorizedResponse(set: any) {

@@ -1,3 +1,7 @@
+// * Backend module: karyawan-be/src/utils/jwt.ts
+// & This file defines backend logic for jwt.ts.
+// % File ini mendefinisikan logika backend untuk jwt.ts.
+
 import * as argon2 from "argon2";
 
 // & ============ Password Hashing dengan Argon2 ============

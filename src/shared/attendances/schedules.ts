@@ -213,6 +213,40 @@ export const parseTime = (t: string) => {
   return { hours: h, minutes: m };
 };
 
+interface CheckInPunctualityMetrics {
+  diffMinutes: number; // & Positive if late, negative if early, zero if on time.
+  lateMinutes: number; // & Minutes late (0 if on time or early).
+  minutesEarly: number; // & Minutes early (0 if on time or late).
+  isLate: boolean; // & True if actual check-in is after expected time.
+}
+
+// & Calculate punctuality metrics for check-in based on expected schedule time.
+// % Hitung metrik ketepatan waktu check-in berdasarkan jam jadwal.
+export const calculateCheckInPunctuality = (
+  actualCheckIn: Date | null | undefined,
+  expectedCheckIn: Date | null | undefined,
+): CheckInPunctualityMetrics => {
+  if (!actualCheckIn || !expectedCheckIn) {
+    return {
+      diffMinutes: 0,
+      lateMinutes: 0,
+      minutesEarly: 0,
+      isLate: false,
+    };
+  }
+
+  const diffMinutes = Math.floor(
+    (actualCheckIn.getTime() - expectedCheckIn.getTime()) / 60000,
+  );
+
+  return {
+    diffMinutes,
+    lateMinutes: Math.max(diffMinutes, 0),
+    minutesEarly: Math.max(-diffMinutes, 0),
+    isLate: diffMinutes > 0,
+  };
+};
+
 // & Build business day boundaries for a date based on timezone day key.
 // % Bangun batas hari bisnis untuk tanggal berdasarkan day key timezone.
 export const getDayRangeByTimezone = (date: Date, timezone: string) => {

@@ -15,11 +15,13 @@ import { employeeRoutes } from "./modules/employees";
 import { faceRoutes } from "./modules/faces";
 import { geofenceRoutes } from "./modules/geofences";
 import { holidayRoutes } from "./modules/holidays";
+import { pointsRoutes } from "./modules/points";
 import { positionRoutes } from "./modules/positions";
 import { rbacRoutes } from "./modules/rbac";
 import { RootHandler } from "./modules/root";
 import { submissionRoutes } from "./modules/submissions";
 import { workingScheduleRoutes } from "./modules/workingSchedules";
+import { notificationRoutes } from "./modules/notifications";
 
 // & Create versioned API server instance using configured API version.
 // % Buat instance server API bertag versi menggunakan versi API pada konfigurasi.
@@ -45,6 +47,7 @@ server_v1
   .use(employeeRoutes)
   .use(faceRoutes)
   .use(attendanceRoutes)
+  .use(pointsRoutes)
   .use(workingScheduleRoutes)
   .use(geofenceRoutes)
   .use(submissionRoutes)
@@ -54,6 +57,7 @@ server_v1
   .use(assessmentCategoriesRoutes)
   .use(assessmentsRoutes)
   .use(rbacRoutes)
+  .use(notificationRoutes)
 
   // & Expose interactive Swagger documentation for API inspection.
   // % Tampilkan dokumentasi Swagger interaktif untuk inspeksi API.

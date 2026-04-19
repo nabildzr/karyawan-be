@@ -61,6 +61,27 @@ const WEEK_DAYS_EN = [
 
 const NON_WORKING_DAYS = new Set<string>(["Saturday", "Sunday"]);
 
+// & Default and helper for configurable employee seed volume.
+// % Default dan helper untuk jumlah data karyawan seed yang bisa dikonfigurasi.
+const DEFAULT_TOTAL_EMPLOYEE_SEED = 1000;
+const FIXED_MANAGER_SEED_COUNT = 10;
+
+const parsePositiveInteger = (value: string | undefined, fallback: number) => {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) return fallback;
+  return parsed;
+};
+
+const TOTAL_EMPLOYEE_SEED_COUNT = parsePositiveInteger(
+  process.env.SEED_TOTAL_EMPLOYEES,
+  DEFAULT_TOTAL_EMPLOYEE_SEED,
+);
+
+const STAFF_SEED_COUNT = Math.max(
+  TOTAL_EMPLOYEE_SEED_COUNT - FIXED_MANAGER_SEED_COUNT,
+  0,
+);
+
 // & RBAC resources mirrored with current frontend route/resource definitions.
 // % Resource RBAC yang diselaraskan dengan definisi route/resource frontend terkini.
 const RBAC_RESOURCE_SEEDS = [
@@ -191,6 +212,13 @@ const RBAC_RESOURCE_SEEDS = [
     supportsApprove: false,
   },
   {
+    key: "points",
+    name: "Dompet Integritas",
+    routePath: "/admin/dompet-integritas",
+    groupName: "Keamanan",
+    supportsApprove: false,
+  },
+  {
     key: "employee_home",
     name: "Portal Karyawan - Beranda",
     routePath: "/karyawan",
@@ -225,6 +253,13 @@ const RBAC_RESOURCE_SEEDS = [
     groupName: "Portal Karyawan",
     supportsApprove: false,
   },
+  {
+    key: "employee_wallet",
+    name: "Portal Karyawan - Dompet Integritas",
+    routePath: "/karyawan/dompet",
+    groupName: "Portal Karyawan",
+    supportsApprove: false,
+  },
 ] as const;
 
 // & Default role-to-resource grants for non-super-admin roles.
@@ -235,7 +270,9 @@ const ROLE_PERMISSION_SEEDS: Record<
     Record<(typeof RBAC_RESOURCE_SEEDS)[number]["key"], PermissionAction[]>
   >
 > = {
-  ADMIN: {},
+  ADMIN: {
+    points: [...CRUD_ACTIONS],
+  },
   CEO: {
     dashboard: [PermissionAction.READ],
     divisions: [PermissionAction.READ],
@@ -249,11 +286,13 @@ const ROLE_PERMISSION_SEEDS: Record<
     assessments_division: [PermissionAction.READ],
     assessment_categories: [PermissionAction.READ],
     assessment_reports: [PermissionAction.READ],
+    points: [PermissionAction.READ],
     employee_home: [PermissionAction.READ],
     employee_attendance: [PermissionAction.READ],
     employee_submissions: [PermissionAction.READ],
     employee_schedule: [PermissionAction.READ],
     employee_account: [PermissionAction.READ],
+    employee_wallet: [PermissionAction.READ],
   },
   HR: {
     dashboard: [PermissionAction.READ],
@@ -281,11 +320,13 @@ const ROLE_PERMISSION_SEEDS: Record<
       PermissionAction.UPDATE,
     ],
     assessment_reports: [PermissionAction.READ],
+    points: [...CRUD_ACTIONS],
     employee_home: [PermissionAction.READ],
     employee_attendance: [PermissionAction.READ],
     employee_submissions: [PermissionAction.READ],
     employee_schedule: [PermissionAction.READ],
     employee_account: [PermissionAction.READ],
+    employee_wallet: [PermissionAction.READ],
     rbac: [PermissionAction.READ],
   },
   MANAGER: {
@@ -298,11 +339,13 @@ const ROLE_PERMISSION_SEEDS: Record<
       PermissionAction.UPDATE,
     ],
     assessments_division: [PermissionAction.READ],
+    points: [PermissionAction.READ],
     employee_home: [PermissionAction.READ],
     employee_attendance: [PermissionAction.READ],
     employee_submissions: [PermissionAction.READ],
     employee_schedule: [PermissionAction.READ],
     employee_account: [PermissionAction.READ],
+    employee_wallet: [PermissionAction.READ],
   },
   USER: {
     employee_home: [PermissionAction.READ],
@@ -318,6 +361,8 @@ const ROLE_PERMISSION_SEEDS: Record<
     ],
     employee_schedule: [PermissionAction.READ],
     employee_account: [PermissionAction.READ, PermissionAction.UPDATE],
+    points: [PermissionAction.READ],
+    employee_wallet: [PermissionAction.READ, PermissionAction.CREATE],
   },
 };
 
@@ -451,9 +496,9 @@ async function resetDatabaseForSeed() {
   await prisma.publicHolidays.deleteMany();
 
   await prisma.userFaces.deleteMany();
-  await prisma.userBadges.deleteMany();
-  await prisma.points.deleteMany();
-  await prisma.badges.deleteMany();
+  // Model ini opsional tergantung versi schema prisma yang ter-generate.
+  await (prisma as any).userBadges?.deleteMany?.();
+  await (prisma as any).points?.deleteMany?.();
 
   await prisma.employeeDetails.deleteMany();
   await prisma.employees.deleteMany();
@@ -475,12 +520,21 @@ async function resetDatabaseForSeed() {
 // & Main seed entrypoint for development bootstrap.
 // % Titik masuk utama seed untuk bootstrap environment development.
 async function main() {
-  console.log("🌱 Memulai Massive Database Seeding (20 Karyawan)...");
-  console.log("Membersihkan data sebelumnya...");
-  await resetDatabaseForSeed();
+  console.log(
+    `🌱 Memulai Massive Database Seeding (target total karyawan: ${TOTAL_EMPLOYEE_SEED_COUNT})...`,
+  );
+  console.log(
+    "ℹ️ Ubah jumlah data dengan env variable SEED_TOTAL_EMPLOYEES, contoh: SEED_TOTAL_EMPLOYEES=1000",
+  );
+
+  if (TOTAL_EMPLOYEE_SEED_COUNT < FIXED_MANAGER_SEED_COUNT) {
+    console.warn(
+      `⚠️ SEED_TOTAL_EMPLOYEES (${TOTAL_EMPLOYEE_SEED_COUNT}) lebih kecil dari jumlah manager default (${FIXED_MANAGER_SEED_COUNT}). Tetap akan dibuat ${FIXED_MANAGER_SEED_COUNT} manager dan 0 staff.`,
+    );
+  }
 
   // ==========================================
-  // 0️⃣ PERSIAPAN DATA STATIS
+  // 0️⃣ PERSIAPAN DATA STATIS (Aman karena menggunakan Upsert)
   // ==========================================
 
   console.log("🛡️ Membuat Default RBAC Roles...");
@@ -501,6 +555,23 @@ async function main() {
   }
 
   await seedRbacResourcesAndPermissions();
+
+  // Validasi: Cek apakah data user sudah ada (berarti DB tidak kosong)
+  const existingSeedData = await prisma.users.findUnique({
+    where: { nip: "MGR-001" },
+  });
+
+  if (existingSeedData) {
+    console.log("⚠️ Peringatan: Data Manager (MGR-001) sudah eksis.");
+    console.log(
+      "✅ Validasi lolos: Melewati proses seed karyawan agar tidak terjadi constraint error (bebas duplikat) dan data lama tidak hilang.",
+    );
+    return;
+  }
+
+  console.log("✨ Data kosong. Memulai seed karyawan dan struktur...");
+  // Opsional: Aktifkan baris ini jika memang butuh wipe bersih lewat kode alih-alih `prisma migrate reset`
+  // await resetDatabaseForSeed();
 
   const defaultPassword = "Password123!";
   const hashedPassword = await argon2.hash(defaultPassword);
@@ -705,14 +776,14 @@ async function main() {
   });
 
   // ==========================================
-  // 4️⃣ KASTA 4: BULK INSERT BAWAHAN (17 STAFF)
+  // 4️⃣ KASTA 4: BULK INSERT BAWAHAN (DINAMIS BERDASARKAN VARIABLE)
   // ==========================================
-  console.log("👥 Membangkitkan 17 Staff Bawahan...");
+  console.log(`👥 Membangkitkan ${STAFF_SEED_COUNT} Staff Bawahan...`);
 
   const positionsList = [posDev.id, posHR.id, posOps.id];
 
-  for (let i = 0; i < 17; i++) {
-    const nip = `10${i < 10 ? `0${i}` : i}`; // STF-1000 s/d STF-1016
+  for (let i = 0; i < STAFF_SEED_COUNT; i++) {
+    const nip = `10${i < 10 ? `0${i}` : i}`;
     const name = getRandomName(i);
     // & Rotate assignments to distribute staff across three divisions evenly.
     // % Rotasi assignment untuk membagi staff merata ke tiga divisi.
@@ -722,7 +793,163 @@ async function main() {
     process.stdout.write(`.`); // Bikin efek loading di terminal
   }
 
-  console.log("\n✅ 20 Karyawan berhasil dilahirkan ke dunia (Database)!");
+  // ==========================================
+  // 5️⃣ KASTA 5: MASTER DATA DOMPET INTEGRITAS
+  // ==========================================
+  console.log("\n📊 Membuat Master Data Dompet Integritas...");
+
+  // & Seed point rules yang akan dipakai untuk kalkulasi poin otomatis.
+  // % Seed aturan poin yang digunakan untuk kalkulasi poin otomatis.
+  const pointRules = [
+    {
+      ruleName: "Durasi Keterlambatan > 15 Menit",
+      targetRole: "*",
+      conditionField: "attendance.lateMinutes",
+      conditionOp: ">",
+      conditionValue: "15",
+      pointModifier: -8,
+      description: "Penalty jika terlambat lebih dari 15 menit",
+      isActive: true,
+    },
+    {
+      ruleName: "Absensi Bulanan >= 20 Hari",
+      targetRole: "*",
+      conditionField: "attendance.monthlyCount",
+      conditionOp: ">=",
+      conditionValue: "20",
+      pointModifier: 25,
+      description: "Bonus jika jumlah hadir bulanan minimal 20 hari",
+      isActive: true,
+    },
+    {
+      ruleName: "Datang Lebih Awal Antara 10-30 Menit",
+      targetRole: "*",
+      conditionField: "attendance.minutesEarly",
+      conditionOp: "between",
+      conditionValue: "10,30",
+      pointModifier: 7,
+      description:
+        "Bonus untuk kedatangan lebih awal dalam rentang 10-30 menit",
+      isActive: true,
+    },
+    {
+      ruleName: "Absensi Bulanan < 10 Hari",
+      targetRole: "*",
+      conditionField: "attendance.monthlyCount",
+      conditionOp: "<",
+      conditionValue: "10",
+      pointModifier: -20,
+      description: "Penalty jika jumlah hadir bulanan kurang dari 10 hari",
+      isActive: true,
+    },
+    {
+      ruleName: "Durasi Keterlambatan <= 5 Menit",
+      targetRole: "*",
+      conditionField: "attendance.lateMinutes",
+      conditionOp: "<=",
+      conditionValue: "5",
+      pointModifier: 3,
+      description: "Bonus kecil jika keterlambatan masih maksimal 5 menit",
+      isActive: true,
+    },
+    {
+      ruleName: "Datang Tepat Waktu (Early == 0)",
+      targetRole: "*",
+      conditionField: "attendance.minutesEarly",
+      conditionOp: "==",
+      conditionValue: "0",
+      pointModifier: 2,
+      description:
+        "Bonus dasar jika datang tepat di jam mulai (tidak lebih awal)",
+      isActive: true,
+    },
+    {
+      ruleName: "Status Alpa = True",
+      targetRole: "*",
+      conditionField: "attendance.isAbsent",
+      conditionOp: "==",
+      conditionValue: "true",
+      pointModifier: -25,
+      description: "Penalty besar jika status absensi alpa",
+      isActive: true,
+    },
+    {
+      ruleName: "Status Terlambat = True",
+      targetRole: "*",
+      conditionField: "attendance.isLate",
+      conditionOp: "==",
+      conditionValue: "true",
+      pointModifier: -5,
+      description: "Penalty saat status absensi terlambat",
+      isActive: true,
+    },
+  ];
+
+  await prisma.pointRules.createMany({
+    data: pointRules,
+  });
+
+  // & Seed flexibility items yang bisa dibeli karyawan dengan poin mereka.
+  // % Seed item fleksibilitas yang bisa dibeli dengan poin.
+  const flexibilityItems = [
+    {
+      itemName: "Work from Home 1 Hari",
+      pointCost: 100,
+      itemType: "late_allowance_15m",
+      durationDays: 1,
+      maxPerMonth: 2,
+      description: "Token untuk bekerja dari rumah sehari",
+      iconUrl: "https://cdn-icons-png.flaticon.com/512/2169/2169268.png",
+    },
+    {
+      itemName: "Jam Masuk Fleksibel 1 Minggu",
+      pointCost: 150,
+      itemType: "late_allowance_30m",
+      durationDays: 7,
+      maxPerMonth: 1,
+      description: "Token untuk jam masuk fleksibel selama 1 minggu",
+      iconUrl: "https://cdn-icons-png.flaticon.com/512/3050/3050159.png",
+    },
+    {
+      itemName: "Libur Tambahan 1 Hari",
+      pointCost: 200,
+      itemType: "late_allowance_60m",
+      durationDays: 1,
+      maxPerMonth: 1,
+      description: "Token untuk tambahan 1 hari libur",
+      iconUrl: "https://cdn-icons-png.flaticon.com/512/2913/2913152.png",
+    },
+    //     { value: "absence_excuse", label: "Konversi ABSENT jadi LEAVE" },
+    // { value: "wfh_allowance", label: "Kelonggaran WFH" }
+    {
+      itemName: "Konsultasi Karir 1 Jam",
+      pointCost: 75,
+      itemType: "special_service",
+      durationDays: 30,
+      maxPerMonth: 3,
+      description: "Token untuk konsultasi karir dengan HR",
+      iconUrl: "https://cdn-icons-png.flaticon.com/512/1995/1995534.png",
+    },
+    {
+      itemName: "Voucher Makan Siang (IDR 50K)",
+      pointCost: 50,
+      itemType: "voucher",
+      durationDays: 90,
+      maxPerMonth: 5,
+      description: "Voucher untuk makan siang senilai 50 ribu",
+      iconUrl: "https://cdn-icons-png.flaticon.com/512/921/921489.png",
+    },
+  ];
+
+  await prisma.flexibilityItems.createMany({
+    data: flexibilityItems,
+  });
+
+  console.log("✅ Master Data Dompet Integritas berhasil dibuat!");
+
+  console.log(
+    `\n✅ ${FIXED_MANAGER_SEED_COUNT + STAFF_SEED_COUNT} Karyawan berhasil dilahirkan ke dunia (Database)!`,
+  );
   console.log(
     "Cobain login pakai NIP: MGR-001 atau STF-1005 dengan password: Password123!",
   );

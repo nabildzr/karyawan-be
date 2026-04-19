@@ -1,4 +1,7 @@
-// * File ini dipertahankan sebagai compatibility bridge untuk module rekap.
-// & Re-export service facade dari struktur services terbaru.
-// % Re-export facade service dari struktur services terbaru.
-export { HistoryService } from "./services";
+// * Backend module service: src/modules/rekap/service.ts
+
+import { f } from "./services/f.service";
+
+export const RekapService = {
+  f,
+};

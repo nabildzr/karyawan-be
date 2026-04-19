@@ -1,3 +1,7 @@
+// * Backend module: karyawan-be/src/utils/holidayshelper.ts
+// & This file defines backend logic for holidayshelper.ts.
+// % File ini mendefinisikan logika backend untuk holidayshelper.ts.
+
 import prisma from "../config/prisma";
 
 const DEFAULT_TIMEZONE = "Asia/Jakarta";

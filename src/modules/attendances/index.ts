@@ -1,3 +1,7 @@
+// * Backend module: karyawan-be/src/modules/attendances/index.ts
+// & This file defines backend logic for index.ts.
+// % File ini mendefinisikan logika backend untuk index.ts.
+
 import { Elysia, t } from "elysia";
 import { HttpStatusEnum } from "elysia-http-status-code/status";
 import {
@@ -177,6 +181,33 @@ export const attendanceRoutes = new Elysia({
         filter: t.Optional(t.String()),
       }),
       detail: { summary: "Ambil riwayat absensi dengan pagination" },
+    },
+  )
+  // & ============ GET DETAIL RIWAYAT ABSENSI (KARYAWAN) ============
+  .get(
+    "/history/:id",
+    async ({ auth, params, set }) => {
+      try {
+        const data = await AttendanceService.getHistoryById(
+          auth!.sub,
+          params.id,
+        );
+
+        set.status = HttpStatusEnum.HTTP_200_OK;
+        return successResponse({
+          data,
+          message: "Detail riwayat absensi berhasil diambil.",
+        });
+      } catch (error: any) {
+        return mapError(error, set);
+      }
+    },
+    {
+      beforeHandle: [checkAuth],
+      params: t.Object({
+        id: t.String(),
+      }),
+      detail: { summary: "Ambil detail riwayat absensi milik sendiri" },
     },
   )
   // & ============ GET KONTEKS ABSENSI HARI INI (KARYAWAN) ============

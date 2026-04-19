@@ -1,3 +1,7 @@
+// * Backend module: karyawan-be/src/config/cloudinary.ts
+// & This file defines backend logic for cloudinary.ts.
+// % File ini mendefinisikan logika backend untuk cloudinary.ts.
+
 import { v2 as cloudinary } from "cloudinary";
 
 // & A flag to track whether Cloudinary has been configured to prevent redundant configuration.

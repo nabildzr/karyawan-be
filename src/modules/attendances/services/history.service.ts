@@ -204,3 +204,74 @@ export const getHistory = async (
     has_more: page < totalPages,
   };
 };
+
+// & Get one attendance detail that belongs to the authenticated employee.
+// % Ambil detail satu absensi yang memang milik karyawan terautentikasi.
+export const getHistoryById = async (userId: string, attendanceId: string) => {
+  const employee = await prisma.employees.findFirst({
+    where: { userId },
+    select: { id: true },
+  });
+
+  if (!employee) throw new Error("Not Found: Data karyawan tidak ditemukan.");
+
+  const attendance = await prisma.attendances.findFirst({
+    where: {
+      id: attendanceId,
+      employeeId: employee.id,
+    },
+    include: {
+      geofences: {
+        select: {
+          id: true,
+          name: true,
+          latitude: true,
+          longitude: true,
+          radius: true,
+        },
+      },
+      geofencesCheckOut: {
+        select: {
+          id: true,
+          name: true,
+          latitude: true,
+          longitude: true,
+          radius: true,
+        },
+      },
+    },
+  });
+
+  if (!attendance)
+    throw new Error("Not Found: Detail absensi tidak ditemukan.");
+
+  return {
+    ...attendance,
+    latitudeCheckInSnapshot: attendance.latitudeCheckInSnapshot
+      ? Number(attendance.latitudeCheckInSnapshot)
+      : null,
+    longitudeCheckInSnapshot: attendance.longitudeCheckInSnapshot
+      ? Number(attendance.longitudeCheckInSnapshot)
+      : null,
+    latitudeCheckOutSnapshot: attendance.latitudeCheckOutSnapshot
+      ? Number(attendance.latitudeCheckOutSnapshot)
+      : null,
+    longitudeCheckOutSnapshot: attendance.longitudeCheckOutSnapshot
+      ? Number(attendance.longitudeCheckOutSnapshot)
+      : null,
+    geofences: attendance.geofences
+      ? {
+          ...attendance.geofences,
+          latitude: String(attendance.geofences.latitude),
+          longitude: String(attendance.geofences.longitude),
+        }
+      : null,
+    geofencesCheckOut: attendance.geofencesCheckOut
+      ? {
+          ...attendance.geofencesCheckOut,
+          latitude: String(attendance.geofencesCheckOut.latitude),
+          longitude: String(attendance.geofencesCheckOut.longitude),
+        }
+      : null,
+  };
+};

@@ -1,3 +1,7 @@
+// * Backend module: karyawan-be/src/modules/attendances/model.ts
+// & This file defines backend logic for model.ts.
+// % File ini mendefinisikan logika backend untuk model.ts.
+
 
 
 

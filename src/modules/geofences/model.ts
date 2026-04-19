@@ -1,3 +1,7 @@
+// * Backend module: karyawan-be/src/modules/geofences/model.ts
+// & This file defines backend logic for model.ts.
+// % File ini mendefinisikan logika backend untuk model.ts.
+
 import { t } from "elysia";
 import {
   GeofencesInputCreate,

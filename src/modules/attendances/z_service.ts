@@ -1,3 +1,7 @@
+// * Backend module: karyawan-be/src/modules/attendances/z_service.ts
+// & This file defines backend logic for z_service.ts.
+// % File ini mendefinisikan logika backend untuk z_service.ts.
+
 // import prisma from "../../config/prisma";
 // import { haversineDistance } from "../../utils";
 

@@ -1,3 +1,7 @@
+// * Backend module: karyawan-be/src/utils/geo.ts
+// & This file defines backend logic for geo.ts.
+// % File ini mendefinisikan logika backend untuk geo.ts.
+
 // Konversi derajat ke radian
 const deg2rad = (deg: number): number => deg * (Math.PI / 180);
 

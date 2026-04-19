@@ -53,17 +53,81 @@ model Users {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // & Point wallet denormalized fields for performance
+  // % Field integritas dompet untuk performa
+  currentPoints   Int     @default(0)
+
   rbacRole RbacRoles? @relation(fields: [rbacRoleId], references: [id])
 
   managedDivisions Divisions[]   @relation("DivisionManager")
   evaluationsGiven Assessments[] @relation("EvaluatorRelation")
 
   employees   Employees?
-  userBadges  UserBadges[]
-  points      Points[]
+  
   userFaces   UserFaces?
   submissions Submissions[]
   manualEntryAttendances Attendances[] @relation("ManualEntryBy")
+  
+  // & Point wallet relations
+  // % Relasi dompet integritas
+  pointLedgers PointLedgers[]
+  userTokens   UserTokens[]
+
+  // & Notifications relations
+  // % Relasi untuk sistem notifikasi
+  notifications Notifications[]
+  pushSubscriptions PushSubscriptions[]
+}
+
+// & Gamification models for badges and points.
+// % Model gamifikasi untuk badge dan poin.
+enum NotificationCategory {
+  ATTENDANCE      // Notif absensi (check-in/out berhasil, absen)
+  POINTS          // Riwayat poin (earn, penalty, adjustment)
+  SCHEDULE        // Perubahan jadwal kerja
+  ASSESSMENT      // Dinilai oleh supervisor/evaluator
+  SUBMISSION      // Pengajuan disetujui/ditolak
+  GENERAL         // Lainnya
+}
+
+model Notifications {
+  id          String               @id @default(uuid())
+  userId      String
+  user        Users                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  body        String               @db.Text
+  category    NotificationCategory @default(GENERAL)
+  isRead      Boolean              @default(false)
+  readAt      DateTime?
+
+  // Referensi opsional ke entitas terkait
+  referenceEntity String?          // "attendance", "submission", "assessment", etc.
+  referenceId     String?          // UUID entity terkait
+
+  // Web Push metadata
+  pushSent    Boolean              @default(false)
+  pushSentAt  DateTime?
+
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([userId, isRead, createdAt])
+  @@index([userId, category])
+}
+
+model PushSubscriptions {
+  id         String   @id @default(uuid())
+  userId     String
+  user       Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@index([userId])
 }
 
 model RbacRoles {
@@ -211,7 +275,7 @@ model AssessmentCategories {
   id          String  @id @default(uuid())
   name        String // "Kerja Sama", "Inisiatif", "Kedisiplinan"
   description String? @db.Text
-  type        String? // Buat filter: "Employee", "Managerial"
+  // type        String? // Buat filter: "Employee", "Managerial"
   isActive    Boolean @default(true)
 
   // Fitur Rahasia (Req #4): Admin bisa nentuin nilai ini boleh diliat bawahan atau nggak
@@ -503,6 +567,12 @@ model Attendances {
   geofencesCheckOutId String?
 
   geofencesCheckOut Geofences? @relation("AttendanceCheckOut", fields: [geofencesCheckOutId], references: [id])
+
+  // & Point wallet integration fields
+  // % Field integrasi dompet integritas
+  pointsEarned    Int?     // Poin yang diperoleh dari absensi ini
+  usedTokenId     String?  @unique // FK ke UserTokens.id (must be unique for one-to-one)
+  usedToken       UserTokens? @relation("AttendanceUsedToken", fields: [usedTokenId], references: [id], onDelete: SetNull)
 }
 
 model AuditLogs {
@@ -541,39 +611,115 @@ model UserFaces {
   updatedAt DateTime @updatedAt
 }
 
-// & Gamification models for badges and points.
-// % Model gamifikasi untuk badge dan poin.
-model Badges {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
-  userBadges UserBadges[]
+
+// & POINT WALLET (DOMPET INTEGRITAS) MODELS
+// & Dynamic Rule Engine, Transaction Ledger, Marketplace Catalog, Token Inventory
+// % Model Sistem Dompet Integritas: Mesin Aturan Dinamis, Buku Besar, Katalog Marketplace, Inventory Token
+
+// & Point Rules: Dynamic rule engine for automated point calculation
+// % Aturan Poin: Mesin aturan dinamis untuk kalkulasi poin otomatis
+model PointRules {
+  id              String   @id @default(uuid())
+  ruleName        String   // "Datang Pagi Banget", "Terlambat 15+ Menit"
+  targetRole      String   // "USER", "ADMIN", "HR" (dari RbacRoles.key)
+  
+  // & Condition: JIKA jam_check_in < 06:30 MAKA +5
+  // % Kondisi: IF jam_check_in < 06:30 THEN +5
+  conditionField  String   // "check_in_time" | "late_minutes" | "attendance_status"
+  conditionOp     String   // "<", ">", "==", "between", "in"
+  conditionValue  String   // "06:30:00" | "15" | "LATE"
+  
+  pointModifier   Int      // +5, -3, 0 (dapat positif atau negatif)
+  description     String?  @db.Text
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([isActive, targetRole])
 }
 
-// & Pivot model connecting users with awarded badges.
-// % Model pivot yang menghubungkan user dengan badge yang diberikan.
-model UserBadges {
-  id        String   @id @default(uuid())
-  userId    String
-  user      Users    @relation(fields: [userId], references: [id])
-  badgeId   String
-  badge     Badges   @relation(fields: [badgeId], references: [id])
-  awardedAt DateTime @default(now())
 
-  @@unique([userId, badgeId])
+// & Enum untuk Tipe Transaksi Poin
+// % Enum for Point Transaction Types
+enum TransactionType {
+  EARN
+  SPEND
+  PENALTY
+  ADJUSTMENT
 }
 
-// & Point history model for user reward tracking.
-// % Model riwayat poin untuk pelacakan reward user.
-model Points {
-  id        String   @id @default(uuid())
-  userId    String
-  user      Users    @relation(fields: [userId], references: [id])
-  points    Int
-  reason    String // alasan pemberian poin
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// & Point Ledgers: Audit trail / bank-style transaction tracking for all point mutations
+// % Buku Besar Poin: Jejak audit / pencatatan transaksi ala bank untuk semua mutasi poin
+model PointLedgers {
+  id              String   @id @default(uuid())
+  userId          String
+  user            Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  transactionType TransactionType
+  amount          Int      // +5, -3 (signed)
+  balanceBefore   Int      // Saldo sebelum transaksi
+  balanceAfter    Int      // Saldo sesudah transaksi
+  
+  description     String?  @db.Text // "Check-in tepat waktu 12/08/2024"
+  referenceEntity String?  // "attendance", "token_purchase", "rule_trigger"
+  referenceId     String?  // FK ke attendance.id atau transaction lain
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId, createdAt])
+  @@index([transactionType])
+}
+
+// & Flexibility Items: Marketplace catalog for tradeable rewards (tokens)
+// % Item Fleksibilitas: Katalog marketplace untuk reward yang bisa ditukar (token)
+model FlexibilityItems {
+  id              String   @id @default(uuid())
+  itemName        String   // "Bebas Terlambat 15 Menit", "Izin Tanpa Surat"
+  pointCost       Int      // 20, 50, 100
+  
+  itemType        String   // "late_allowance", "absence_excuse", "wfh", "overtime"
+  durationDays    Int      // 1, 7, 30 (masa berlaku token)
+  maxPerMonth     Int?     // Stock limit per user per bulan (nullable = unlimited)
+  conditionField  String?  // "attendance.status" | "attendance.lateMinutes"
+  conditionValue  String?  // "ABSENT" | "30"
+  expiredAt       DateTime? // Masa aktif listing item di marketplace
+  
+  description     String?  @db.Text
+  iconUrl         String?  // URL ilustrasi dari cloudinary
+  
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  userTokens      UserTokens[]
+
+  @@index([isActive, expiredAt])
+}
+
+// & User Tokens: User inventory of purchased flexibility tokens
+// % Token Pengguna: Inventory token fleksibilitas yang dibeli pengguna
+model UserTokens {
+  id              String   @id @default(uuid())
+  userId          String
+  user            Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  itemId          String
+  item            FlexibilityItems @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  
+  status          String   // "AVAILABLE", "USED", "EXPIRED"
+  usedAt          DateTime?        // Kapan token ini digunakan
+  
+  // & Back-reference to attendance where this token was used
+  // % Referensi balik ke absensi dimana token ini dipakai
+  attendance      Attendances? @relation("AttendanceUsedToken")
+  
+  expiresAt       DateTime // Token berlaku sampai kapan
+  remainingDays   Int      @default(0) // Cache sisa hari, disinkronkan dari expiresAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId, status])
+  @@index([expiresAt])
 }

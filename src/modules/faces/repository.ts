@@ -53,7 +53,7 @@ export const FaceRepository = {
     return prisma.userFaces.create({
       data: {
         userId,
-        faceData,
+        faceData: Uint8Array.from(faceData),
       },
     });
   },
@@ -63,7 +63,7 @@ export const FaceRepository = {
   async updateFace(userId: string, faceData: Buffer) {
     return prisma.userFaces.update({
       where: { userId },
-      data: { faceData },
+      data: { faceData: Uint8Array.from(faceData) },
     });
   },
 

@@ -1,4 +1,4 @@
-// * File ini menangani validasi bisnis untuk module geofences.
+// * File ini menangani utilitas internal module geofences.
 
 import { GeofenceRepository } from "../repository";
 

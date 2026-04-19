@@ -1,3 +1,7 @@
+// * Backend module: karyawan-be/src/config/constants.ts
+// & This file defines backend logic for constants.ts.
+// % File ini mendefinisikan logika backend untuk constants.ts.
+
 export const constants = {
   // & Define server metadata constants for application identification and contact information.
   // % Mendefinisikan konstanta metadata server untuk identifikasi aplikasi dan informasi kontak.

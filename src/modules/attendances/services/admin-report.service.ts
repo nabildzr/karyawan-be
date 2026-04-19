@@ -5,12 +5,14 @@
 import prisma from "../../../config/prisma";
 import { DEFAULT_TIMEZONE } from "../../../config/timezone";
 import {
-    toBusinessEndOfDay,
-    toBusinessStartOfDay,
+  calculateCheckInPunctuality,
+  toBusinessEndOfDay,
+  toBusinessStartOfDay,
 } from "../../../shared/attendances/schedules";
 import { resolveSubmissionBlockingReason } from "../../../shared/attendances/submissions";
 import { writeAuditLog } from "../../../shared/audit/writeAudit";
 import { toDateKey } from "../../../utils/holidayshelper";
+import { PointsService } from "../../points/service";
 import { CorrectAttendancePayload, ManualAttendancePayload } from "../model";
 import { findBlockingSubmission } from "./blocking-submission.service";
 
@@ -55,6 +57,15 @@ export const manualAttendance = async (
 
   const employee = await prisma.employees.findUnique({
     where: { id: employeeId },
+    include: {
+      user: {
+        include: {
+          rbacRole: {
+            select: { key: true },
+          },
+        },
+      },
+    },
   });
   if (!employee) throw new Error("Not Found: Data karyawan tidak ditemukan.");
 
@@ -91,7 +102,7 @@ export const manualAttendance = async (
 
   // & Persist manual entry and write audit log in one transaction.
   // % Simpan entri manual dan tulis audit log dalam satu transaksi.
-  return await prisma.$transaction(async (tx) => {
+  const attendance = await prisma.$transaction(async (tx) => {
     const attendance = await tx.attendances.create({
       data: {
         employeeId,
@@ -141,6 +152,44 @@ export const manualAttendance = async (
 
     return attendance;
   });
+
+  // & Evaluate points in-request to avoid lost jobs under short-lived workers.
+  // % Evaluasi poin langsung dalam request untuk mencegah job hilang di worker yang singkat hidupnya.
+  try {
+    const userRole = employee.user?.rbacRole?.key || "USER";
+    const punctuality = calculateCheckInPunctuality(
+      attendance.checkIn,
+      attendance.expectedCheckInSnapshot,
+    );
+
+    await PointsService.applyAttendanceRules({
+      userId: employee.userId,
+      role: userRole,
+      attendanceId: attendance.id,
+      source: "MANUAL_ATTENDANCE",
+      actor: {
+        id: adminUserId,
+        role: admin.rbacRole?.key || "SYSTEM",
+      },
+      context: {
+        checkInTime: attendance.checkIn,
+        checkOutTime: attendance.checkOut,
+        attendanceStatus: attendance.status,
+        statusCheckOut: attendance.statusCheckOut,
+        lateMinutes: punctuality.lateMinutes,
+        minutesEarly: punctuality.minutesEarly,
+        isLate: punctuality.isLate,
+        isAbsent: attendance.status === "ABSENT",
+      },
+    });
+  } catch (error) {
+    console.warn(
+      "[POINTS] Failed to record points for manual attendance:",
+      error,
+    );
+  }
+
+  return attendance;
 };
 
 // & Correct existing attendance by admin with audit and submission safeguards.

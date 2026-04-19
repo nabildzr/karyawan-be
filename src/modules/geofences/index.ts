@@ -1,3 +1,7 @@
+// * Backend module: karyawan-be/src/modules/geofences/index.ts
+// & This file defines backend logic for index.ts.
+// % File ini mendefinisikan logika backend untuk index.ts.
+
 import Elysia, { t } from "elysia";
 import { HttpStatusEnum } from "elysia-http-status-code/status";
 import { authPlugin, checkAdminOrCEO, checkAuth } from "../../middleware/auth"; // Guard admin/ceo + endpoint authenticated untuk portal karyawan
@@ -5,7 +9,7 @@ import { resolveAuditActor } from "../../shared/audit/actor";
 import { successResponse } from "../../utils";
 import { mapError } from "../../utils/mapError";
 import { GeofenceInputCreateDTO, GeofenceInputUpdateDTO } from "./model";
-import { GeofenceService } from "./service";
+import { GeofencesService } from "./service";
 
 export const geofenceRoutes = new Elysia({
   prefix: "/geofences",
@@ -19,7 +23,7 @@ export const geofenceRoutes = new Elysia({
     "/",
     async ({ set }) => {
       try {
-        const data = await GeofenceService.getAll();
+        const data = await GeofencesService.getAll();
         set.status = HttpStatusEnum.HTTP_200_OK; // 200: berhasil mengambil data
         return successResponse({
           data,
@@ -58,7 +62,7 @@ export const geofenceRoutes = new Elysia({
         }
 
         // Jalankan algoritma nearest-office: sort semua geofence by distance, ambil yang dalam radius
-        const nearest = await GeofenceService.findNearest(lat, lon);
+        const nearest = await GeofencesService.findNearest(lat, lon);
 
         set.status = HttpStatusEnum.HTTP_200_OK;
         return successResponse({
@@ -91,7 +95,7 @@ export const geofenceRoutes = new Elysia({
     "/office-locations",
     async ({ set }) => {
       try {
-        const data = await GeofenceService.getOfficeLocations();
+        const data = await GeofencesService.getOfficeLocations();
         set.status = HttpStatusEnum.HTTP_200_OK;
         return successResponse({
           data,
@@ -116,7 +120,7 @@ export const geofenceRoutes = new Elysia({
     "/:id",
     async ({ params, set }) => {
       try {
-        const data = await GeofenceService.getById(params.id);
+        const data = await GeofencesService.getById(params.id);
         set.status = HttpStatusEnum.HTTP_200_OK;
         return successResponse({
           data,
@@ -142,7 +146,7 @@ export const geofenceRoutes = new Elysia({
     "/",
     async ({ auth, body, set }) => {
       try {
-        const data = await GeofenceService.create(
+        const data = await GeofencesService.create(
           body,
           resolveAuditActor(auth),
         );
@@ -168,7 +172,7 @@ export const geofenceRoutes = new Elysia({
     "/:id",
     async ({ auth, body, params, set }) => {
       try {
-        const data = await GeofenceService.update(
+        const data = await GeofencesService.update(
           params.id,
           body,
           resolveAuditActor(auth),
@@ -198,7 +202,7 @@ export const geofenceRoutes = new Elysia({
     "/:id",
     async ({ auth, params, set }) => {
       try {
-        const data = await GeofenceService.delete(
+        const data = await GeofencesService.delete(
           params.id,
           resolveAuditActor(auth),
         );

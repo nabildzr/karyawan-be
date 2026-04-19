@@ -18,18 +18,24 @@
     "@prisma/client": "^7.4.2",
     "@sinclair/typebox": "^0.34.48",
     "@types/pdfkit": "^0.17.5",
+    "@types/web-push": "^3.6.4",
     "argon2": "^0.44.0",
     "cloudinary": "^2.9.0",
-    "elysia": "latest",
+    "elysia": "^1.4.27",
     "elysia-http-status-code": "^1.0.9",
     "email-regex-safe": "^4.0.0",
+    "ioredis": "^5.10.1",
+    "nodemailer": "^8.0.5",
     "pdfkit": "^0.17.2",
     "pg": "^8.20.0",
     "prismabox": "^1.1.26",
+    "web-push": "^3.6.7",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "bun-types": "latest"
+    "@types/nodemailer": "^8.0.0",
+    "bun-types": "latest",
+    "prisma": "7.4.2"
   },
   "module": "src/index.js"
 }

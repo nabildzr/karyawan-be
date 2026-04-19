@@ -1,11 +1,20 @@
+// * Backend module: karyawan-be/src/app/jobs/attendanceCron.ts
+// & This file defines backend logic for attendanceCron.ts.
+// % File ini mendefinisikan logika backend untuk attendanceCron.ts.
+
 import { cron } from "@elysiajs/cron";
 import { Elysia } from "elysia";
 import prisma from "../../config/prisma";
 import { findBlockingSubmissionByUserIds } from "../../modules/attendances/services/blocking-submission.service";
+import { PointsService } from "../../modules/points/service";
 import { checkIsHoliday } from "../../utils/holidayshelper";
 
 const DEFAULT_TIMEZONE = "Asia/Jakarta";
 const JAKARTA_UTC_OFFSET = "+07:00";
+const SYSTEM_ACTOR = {
+  id: "SYSTEM",
+  role: "SYSTEM",
+};
 
 const EN_TO_ID: Record<string, string> = {
   Monday: "Senin",
@@ -52,7 +61,7 @@ export const attendanceCronPlugin = new Elysia().use(
   cron({
     name: "auto-alpha-generator",
     // Pattern: Detik Menit Jam Tanggal Bulan Hari (Jalan tiap 23:59:00)
-    pattern: "0 35 17 * * *",
+    pattern: "0 44 13 * * *",
     async run() {
       console.log("[CRON] 🤖 Memulai pengecekan Alpha harian...");
 
@@ -87,7 +96,19 @@ export const attendanceCronPlugin = new Elysia().use(
             // 🔥 FIX 2: Bawa data shift biar gak crash pas displit jamnya
             shift: true,
             workingSchedule: {
-              include: { employees: true },
+              include: {
+                employees: {
+                  include: {
+                    user: {
+                      include: {
+                        rbacRole: {
+                          select: { key: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
         });
@@ -140,7 +161,7 @@ export const attendanceCronPlugin = new Elysia().use(
           for (const emp of scheduleDay.workingSchedule.employees) {
             expectedEmployees.set(emp.id, {
               emp: emp,
-              scheduleDay: scheduleDay, 
+              scheduleDay: scheduleDay,
             });
           }
         }
@@ -180,6 +201,13 @@ export const attendanceCronPlugin = new Elysia().use(
           if (emp.joinDate > now) continue;
 
           if (!attendedEmployeeIds.has(empId)) {
+            if (!emp.userId) {
+              console.log(
+                `[CRON] ⚠️ Skip Alpha untuk employee ${empId} karena userId tidak tersedia.`,
+              );
+              continue;
+            }
+
             const blockingSubmission = emp.userId
               ? blockingSubmissionMap.get(emp.userId)
               : null;
@@ -215,6 +243,8 @@ export const attendanceCronPlugin = new Elysia().use(
             // Push dengan field lengkap sesuai schema lu
             alphaRecords.push({
               employeeId: empId,
+              userId: emp.userId,
+              userRole: emp.user?.rbacRole?.key || "USER",
               // date: new Date(), <--- KOLOM INI NGGAK ADA DI SCH\EMA LU (Jadi gue hapus)
               status: "ABSENT",
 
@@ -228,11 +258,48 @@ export const attendanceCronPlugin = new Elysia().use(
           }
         }
 
-        // 5. Eksekusi Mass Insert ke Database
+        // 5. Eksekusi insert data alpha + trigger aturan poin penalti absensi.
         if (alphaRecords.length > 0) {
-          await prisma.attendances.createMany({
-            data: alphaRecords,
-          });
+          const createdAttendances: Array<{
+            id: string;
+            userId: string;
+            userRole: string;
+          }> = [];
+
+          for (const record of alphaRecords) {
+            const created = await prisma.attendances.create({
+              data: {
+                employeeId: record.employeeId,
+                status: record.status,
+                shiftNameSnapshot: record.shiftNameSnapshot,
+                expectedCheckInSnapshot: record.expectedCheckInSnapshot,
+                expectedCheckOutSnapshot: record.expectedCheckOutSnapshot,
+              },
+              select: { id: true },
+            });
+
+            createdAttendances.push({
+              id: created.id,
+              userId: record.userId,
+              userRole: record.userRole,
+            });
+          }
+
+          for (const item of createdAttendances) {
+            await PointsService.applyAttendanceRules({
+              userId: item.userId,
+              role: item.userRole,
+              attendanceId: item.id,
+              source: "CRON_ABSENT",
+              actor: SYSTEM_ACTOR,
+              context: {
+                attendanceStatus: "ABSENT",
+                isAbsent: true,
+                isLate: false,
+              },
+            });
+          }
+
           console.log(
             `[CRON] ✅ Berhasil mencatat ${alphaRecords.length} karyawan ALPHA (Bolos).`,
           );

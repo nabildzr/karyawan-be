@@ -1,4 +1,4 @@
-// * File ini menangani operasi tulis untuk module auth.
+// * File ini menangani autentikasi user untuk module auth.
 
 import { AuthService as LegacyAuthService } from "../legacy";
 

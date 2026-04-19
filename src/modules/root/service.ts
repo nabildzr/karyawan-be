@@ -1,12 +1,15 @@
+// * Backend module service: src/modules/root/service.ts
+// & This file provides service facade and business orchestration for root module.
+// % File ini menyediakan facade service dan orkestrasi business untuk module root.
+
 import { Elysia } from "elysia";
-import { apiResponse, swaggerDetails } from "../../utils";
 import { constants } from "../../config/constants";
+import { apiResponse, swaggerDetails } from "../../utils";
 
 export const RootHandler = new Elysia({
   prefix: "/",
   detail: { description: "Root endpoint", tags: ["Root"] },
 })
-  // & PUBLIC - Health check
   .get(
     "/",
     () => {
@@ -24,8 +27,6 @@ export const RootHandler = new Elysia({
       detail: swaggerDetails("Health Check", "Check if the server is running"),
     },
   )
-
-  // & PUBLIC - Health status
   .get(
     "/health",
     () => {

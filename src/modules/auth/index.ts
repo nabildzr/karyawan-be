@@ -1,3 +1,7 @@
+// * Backend module: karyawan-be/src/modules/auth/index.ts
+// & This file defines backend logic for index.ts.
+// % File ini mendefinisikan logika backend untuk index.ts.
+
 import cookie from "@elysiajs/cookie";
 import jwt from "@elysiajs/jwt";
 import Elysia, { t } from "elysia";
@@ -5,7 +9,13 @@ import { HttpStatusEnum } from "elysia-http-status-code/status";
 import { constants } from "../../config/constants";
 import { authPlugin, checkAuth, signJWT } from "../../middleware/auth";
 import { errorResponse, successResponse } from "../../utils";
-import { LoginDTO } from "./model";
+import {
+  ForgotPasswordDTO,
+  LoginDTO,
+  ResetPasswordDTO,
+  SendCodeDTO,
+  VerifyCodeDTO,
+} from "./model";
 import { AuthService } from "./service";
 
 export const authRoutes = new Elysia({
@@ -84,7 +94,142 @@ export const authRoutes = new Elysia({
       detail: { summary: "Login user dan dapatkan token akses" },
     },
   )
+  .post(
+    "/send-code",
+    async ({ body, set }) => {
+      try {
+        const result = await AuthService.sendCode(body);
 
+        set.status = HttpStatusEnum.HTTP_200_OK;
+        return successResponse({
+          data: result,
+          message:
+            "Jika akun ditemukan, kode dan link reset password akan dikirim ke email terdaftar.",
+        });
+      } catch (error: any) {
+        console.error("Send code error:", error);
+
+        if (error.message.startsWith("Bad Request")) {
+          set.status = HttpStatusEnum.HTTP_400_BAD_REQUEST;
+        } else {
+          set.status = HttpStatusEnum.HTTP_500_INTERNAL_SERVER_ERROR;
+        }
+
+        return errorResponse(
+          error.message.split(": ")[1] ||
+            "Terjadi kesalahan saat mengirim kode verifikasi.",
+        );
+      }
+    },
+    {
+      body: SendCodeDTO,
+      detail: {
+        summary:
+          "Kirim kode verifikasi reset password berdasarkan NIP atau email",
+      },
+    },
+  )
+  .post(
+    "/forgot-password",
+    async ({ body, set }) => {
+      try {
+        const result = await AuthService.forgotPassword(body);
+
+        set.status = HttpStatusEnum.HTTP_200_OK;
+        return successResponse({
+          data: result,
+          message:
+            "Jika akun ditemukan, kode dan link reset password akan dikirim ke email terdaftar.",
+        });
+      } catch (error: any) {
+        console.error("Forgot password error:", error);
+
+        if (error.message.startsWith("Bad Request")) {
+          set.status = HttpStatusEnum.HTTP_400_BAD_REQUEST;
+        } else {
+          set.status = HttpStatusEnum.HTTP_500_INTERNAL_SERVER_ERROR;
+        }
+
+        return errorResponse(
+          error.message.split(": ")[1] ||
+            "Terjadi kesalahan saat memproses lupa password.",
+        );
+      }
+    },
+    {
+      body: ForgotPasswordDTO,
+      detail: {
+        summary: "Legacy alias untuk kirim kode verifikasi reset password",
+      },
+    },
+  )
+  .post(
+    "/reset-password",
+    async ({ body, set }) => {
+      try {
+        await AuthService.resetPassword(body);
+
+        set.status = HttpStatusEnum.HTTP_200_OK;
+        return successResponse({
+          message:
+            "Password berhasil direset. Silakan login menggunakan password baru.",
+        });
+      } catch (error: any) {
+        console.error("Reset password error:", error);
+
+        if (error.message.startsWith("Bad Request")) {
+          set.status = HttpStatusEnum.HTTP_400_BAD_REQUEST;
+        } else {
+          set.status = HttpStatusEnum.HTTP_500_INTERNAL_SERVER_ERROR;
+        }
+
+        return errorResponse(
+          error.message.split(": ")[1] ||
+            "Terjadi kesalahan saat reset password.",
+        );
+      }
+    },
+    {
+      body: ResetPasswordDTO,
+      detail: {
+        summary: "Reset password menggunakan token reset",
+      },
+    },
+  )
+
+  .post(
+    "/verify-code",
+    async ({ body, set }) => {
+      try {
+        const result = await AuthService.verifyCode(body);
+
+        set.status = HttpStatusEnum.HTTP_200_OK;
+        return successResponse({
+          data: result,
+          message: "Kode verifikasi valid.",
+        });
+      } catch (error: any) {
+        console.error("Verify code error:", error);
+
+        if (error.message.startsWith("Bad Request")) {
+          set.status = HttpStatusEnum.HTTP_400_BAD_REQUEST;
+        } else {
+          set.status = HttpStatusEnum.HTTP_500_INTERNAL_SERVER_ERROR;
+        }
+
+        return errorResponse(
+          error.message.split(": ")[1] ||
+            "Terjadi kesalahan saat verifikasi kode.",
+        );
+      }
+    },
+    {
+      body: VerifyCodeDTO,
+      detail: {
+        summary: "Verifikasi kode reset password",
+      },
+    },
+  )
   .use(authPlugin)
   .get(
     "/me",

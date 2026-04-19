@@ -3,18 +3,21 @@
 // % Mengimplementasikan logika inti check-in dan check-out absensi.
 
 import prisma from "../../../config/prisma";
+import { DEFAULT_TIMEZONE } from "../../../config/timezone";
 import {
+  calculateCheckInPunctuality,
   findScheduleDayForToday,
   getDayRangeByTimezone,
   getShiftWindow,
   hasActiveShiftOnDay,
-  parseTime,
 } from "../../../shared/attendances/schedules";
 import { formatSubmissionTypeLabel } from "../../../shared/attendances/submissions";
 import { formatClockByTimezone } from "../../../shared/attendances/timezone";
 import { AuditActor } from "../../../shared/audit/actor";
 import { writeAuditLog } from "../../../shared/audit/writeAudit";
-import { GeofenceService } from "../../geofences/service";
+import { GeofenceService } from "../../geofences/legacy";
+import { NotificationService } from "../../notifications/service";
+import { PointsService } from "../../points/service";
 import { CheckInPayload, CheckOutPayload } from "../model";
 import { findBlockingSubmission } from "./blocking-submission.service";
 import { verifyFace } from "./face.service";
@@ -31,7 +34,7 @@ export const checkIn = async (
     latitude,
     longitude,
     deviceInfo,
-    timezone = "Asia/Jakarta",
+    timezone = DEFAULT_TIMEZONE,
   } = payload;
 
   // & Resolve employee and active working schedule context.
@@ -64,11 +67,21 @@ export const checkIn = async (
 
   const shift = scheduleDay.shift;
 
-  const { shiftEnd } = getShiftWindow(now, {
+  const { shiftStart, shiftEnd } = getShiftWindow(now, {
     startTime: shift.startTime,
     endTime: shift.endTime,
     isCrossDay: shift.isCrossDay,
   });
+
+  const checkInUnlockAt = new Date(shiftStart.getTime() - 60 * 60 * 1000);
+
+  if (now < checkInUnlockAt) {
+    const unlockTimeLabel = formatClockByTimezone(checkInUnlockAt, timezone);
+    const shiftStartLabel = formatClockByTimezone(shiftStart, timezone);
+    throw new Error(
+      `Forbidden: Check-in baru dapat dilakukan mulai ${unlockTimeLabel} (1 jam sebelum shift dimulai pukul ${shiftStartLabel}).`,
+    );
+  }
 
   if (now >= shiftEnd) {
     throw new Error("Forbidden: Jam kerja telah selesai, Anda alpha.");
@@ -76,7 +89,11 @@ export const checkIn = async (
 
   // & Block attendance if there is active submission in the target date range.
   // % Blok absensi jika ada pengajuan aktif pada rentang tanggal terkait.
-  const activeSubmission = await findBlockingSubmission(userId, dayStart, dayEnd);
+  const activeSubmission = await findBlockingSubmission(
+    userId,
+    dayStart,
+    dayEnd,
+  );
 
   if (activeSubmission) {
     throw new Error(
@@ -133,21 +150,10 @@ export const checkIn = async (
   // % Verifikasi wajah setelah validasi bisnis lolos agar panggilan AI tidak sia-sia.
   const faceResult = await verifyFace(userId, image);
 
-  const { hours: sh, minutes: sm } = parseTime(shift.startTime);
-  const shiftStartToday = new Date(now);
-  shiftStartToday.setHours(sh, sm, 0, 0);
+  const status = now <= shiftStart ? "PRESENT" : "LATE";
 
-  const status = now <= shiftStartToday ? "PRESENT" : "LATE";
-
-  const { hours: eh, minutes: em } = parseTime(shift.endTime);
-  const shiftEndDay = new Date(now);
-  if (shift.isCrossDay) {
-    shiftEndDay.setDate(shiftEndDay.getDate() + 1);
-  }
-  shiftEndDay.setHours(eh, em, 0, 0);
-
-  const expectedCheckIn = shiftStartToday;
-  const expectedCheckOut = shiftEndDay;
+  const expectedCheckIn = shiftStart;
+  const expectedCheckOut = shiftEnd;
 
   // & Persist attendance atomically with row lock to prevent duplicate check-in race.
   // % Simpan absensi secara atomik dengan row lock untuk mencegah race check-in ganda.
@@ -215,6 +221,52 @@ export const checkIn = async (
     },
   });
 
+  // & Evaluate points in-request to avoid lost jobs under short-lived workers.
+  // % Evaluasi poin langsung dalam request untuk mencegah job hilang di worker yang singkat hidupnya.
+  try {
+    const userRole = actor.role || "USER";
+
+    // % Hitung metrik ketepatan waktu check-in untuk konteks aturan poin.
+    const punctuality = calculateCheckInPunctuality(
+      attendance.checkIn,
+      attendance.expectedCheckInSnapshot,
+    );
+
+    // & Terapkan aturan poin dengan konteks ketepatan waktu check-in.
+    await PointsService.applyAttendanceRules({
+      userId,
+      role: userRole,
+      attendanceId: attendance.id,
+      source: "CHECK_IN",
+      actor,
+      context: {
+        checkInTime: attendance.checkIn,
+        attendanceStatus: attendance.status,
+        lateMinutes: punctuality.lateMinutes,
+        minutesEarly: punctuality.minutesEarly,
+        isLate: punctuality.isLate,
+        isAbsent: attendance.status === "ABSENT",
+      },
+    });
+  } catch (error) {
+    console.warn("[POINTS] Failed to record points for check-in:", error);
+  }
+
+  try {
+    if (attendance.checkIn) {
+      await NotificationService.createAndPush({
+        userId,
+        title: "Check-in Berhasil",
+        body: `Kamu telah absen masuk pada pukul ${formatClockByTimezone(attendance.checkIn, timezone)} WIB. Semangat bekerja!`,
+        category: "ATTENDANCE",
+        referenceEntity: "Attendances",
+        referenceId: attendance.id,
+      });
+    }
+  } catch (error) {
+    console.warn("[NOTIF] Failed to push notification for check-in:", error);
+  }
+
   return {
     attendance: {
       id: attendance.id,
@@ -254,7 +306,11 @@ export const checkOut = async (
   const now = new Date();
   const { dayStart, dayEnd } = getDayRangeByTimezone(now, timezone);
 
-  const activeSubmission = await findBlockingSubmission(userId, dayStart, dayEnd);
+  const activeSubmission = await findBlockingSubmission(
+    userId,
+    dayStart,
+    dayEnd,
+  );
 
   if (activeSubmission) {
     throw new Error(
@@ -282,7 +338,10 @@ export const checkOut = async (
 
   // & Enforce check-out only in the last 5% of shift duration.
   // % Pastikan check-out hanya boleh di 5% akhir durasi shift.
-  if (attendance.expectedCheckInSnapshot && attendance.expectedCheckOutSnapshot) {
+  if (
+    attendance.expectedCheckInSnapshot &&
+    attendance.expectedCheckOutSnapshot
+  ) {
     const shiftDurationMs =
       attendance.expectedCheckOutSnapshot.getTime() -
       attendance.expectedCheckInSnapshot.getTime();
@@ -376,6 +435,51 @@ export const checkOut = async (
       },
     },
   });
+
+  // & Evaluate points in-request to avoid lost jobs under short-lived workers.
+  // % Evaluasi poin langsung dalam request untuk mencegah job hilang di worker yang singkat hidupnya.
+  try {
+    const userRole = actor.role || "USER";
+    const punctuality = calculateCheckInPunctuality(
+      updated.checkIn,
+      updated.expectedCheckInSnapshot,
+    );
+
+    await PointsService.applyAttendanceRules({
+      userId,
+      role: userRole,
+      attendanceId: updated.id,
+      source: "CHECK_OUT",
+      actor,
+      context: {
+        checkInTime: updated.checkIn,
+        checkOutTime: updated.checkOut,
+        attendanceStatus: updated.status,
+        statusCheckOut: updated.statusCheckOut,
+        lateMinutes: punctuality.lateMinutes,
+        minutesEarly: punctuality.minutesEarly,
+        isLate: punctuality.isLate,
+        isAbsent: updated.status === "ABSENT",
+      },
+    });
+  } catch (error) {
+    console.warn("[POINTS] Failed to record points for check-out:", error);
+  }
+
+  try {
+    if (updated.checkOut) {
+      await NotificationService.createAndPush({
+        userId,
+        title: "Check-out Berhasil",
+        body: `Kamu telah absen pulang pada pukul ${formatClockByTimezone(updated.checkOut, timezone)} WIB. Selamat beristirahat!`,
+        category: "ATTENDANCE",
+        referenceEntity: "Attendances",
+        referenceId: updated.id,
+      });
+    }
+  } catch (error) {
+    console.warn("[NOTIF] Failed to push notification for check-out:", error);
+  }
 
   return {
     attendance: {

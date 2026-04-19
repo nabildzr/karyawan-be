@@ -1,3 +1,7 @@
+// * Backend module: karyawan-be/src/utils/response_helper.ts
+// & This file defines backend logic for response_helper.ts.
+// % File ini mendefinisikan logika backend untuk response_helper.ts.
+
 
 /**
  * Helper untuk swagger documentation

@@ -1,3 +1,7 @@
+// * Backend module: karyawan-be/src/utils/utilities.ts
+// & This file defines backend logic for utilities.ts.
+// % File ini mendefinisikan logika backend untuk utilities.ts.
+
 /**
  * Format date ke ISO string
  */
