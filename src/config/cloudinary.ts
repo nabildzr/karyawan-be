@@ -10,6 +10,10 @@ let isConfigured = false;
 
 // & This function initializes and returns the Cloudinary client instance, ensuring it's configured only once.
 // % Fungsi ini menginisialisasi dan mengembalikan instance klien Cloudinary, memastikan hanya dikonfigurasi sekali.
+/**
+ * Menjalankan tanggung jawab utama fungsi getCloudinaryClient.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function getCloudinaryClient() {
   // % Memastikan bahwa Cloudinary hanya dikonfigurasi sekali untuk menghindari overhead konfigurasi berulang.
   if (isConfigured) {
@@ -40,6 +44,10 @@ export function getCloudinaryClient() {
 
 // & This function retrieves the Cloudinary folder path for submission attachments from environment variables, with a default fallback.
 // % Fungsi ini mengambil path folder Cloudinary untuk lampiran pengajuan dari variabel lingkungan (env), dengan fallback default.
+/**
+ * Menjalankan tanggung jawab utama fungsi getSubmissionAttachmentFolder.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function getSubmissionAttachmentFolder() {
   // ? Folder pengajuan
   return process.env.CLOUDINARY_SUBMISSIONS_FOLDER || "karyawan/submissions";

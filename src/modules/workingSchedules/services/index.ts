@@ -3,6 +3,7 @@
 import { assignEmployees, create, update } from "./create";
 import { findAll, findById, getMobileSummary } from "./report";
 
+/** Mengekspor WorkingScheduleService untuk kebutuhan modul ini. */
 export const WorkingScheduleService = {
   // & Create working schedule.
   // % Buat jadwal kerja.

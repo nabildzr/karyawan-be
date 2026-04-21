@@ -3,6 +3,7 @@
 // % File ini memusatkan objek select Prisma yang reusable untuk query karyawan.
 // & Base select for employee listing/detail without full schedule graph.
 // % Select dasar untuk list/detail karyawan tanpa graph jadwal penuh.
+/** Mengekspor employeeBaseSelect untuk kebutuhan modul ini. */
 export const employeeBaseSelect = {
   id: true,
   fullName: true,
@@ -57,6 +58,7 @@ export const employeeBaseSelect = {
 
 // & Deep select for working schedule including days and shift metadata.
 // % Select mendalam untuk jadwal kerja termasuk hari dan metadata shift.
+/** Mengekspor workingScheduleDeepSelect untuk kebutuhan modul ini. */
 export const workingScheduleDeepSelect = {
   select: {
     id: true,

@@ -405,7 +405,6 @@ enum SubmissionType {
   IZIN_KHUSUS
   DINAS_LUAR
   LEMBUR
-  GANTI_SHIFT_HARI
 }
 
 enum SubmissionStatus {

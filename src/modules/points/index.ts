@@ -22,6 +22,7 @@ import { PointsService } from "./service";
 
 // & Register points route plugin with admin and authenticated user endpoints.
 // % Daftarkan plugin route points untuk endpoint admin dan user terautentikasi.
+/** Mengekspor pointsRoutes untuk kebutuhan modul ini. */
 export const pointsRoutes = new Elysia({
   prefix: "/points",
   detail: { tags: ["Points"] },

@@ -12,6 +12,7 @@ import {
 } from "./model";
 import { SubmissionService } from "./service";
 
+/** Mengekspor submissionRoutes untuk kebutuhan modul ini. */
 export const submissionRoutes = new Elysia({
   prefix: "/submissions",
   detail: { tags: ["Submissions"] },

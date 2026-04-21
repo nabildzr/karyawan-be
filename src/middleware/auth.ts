@@ -9,6 +9,7 @@ import prisma from "../config/prisma";
 import { PermissionAction } from "../generated/prisma/enums";
 
 // & ============ Types ============
+/** Mendefinisikan kontrak data untuk interface JWTPayload. */
 export interface JWTPayload {
   sub: string;
   employeeId?: string | null;
@@ -289,6 +290,7 @@ export async function signJWT(payload: JWTPayload, secret: string) {
     .sign(secretKey); // Pake secretKey yang udah di-encode
 }
 
+/** Mengekspor authPlugin untuk kebutuhan modul ini. */
 export const authPlugin = new Elysia({ name: "auth-plugin" }).derive(
   { as: "scoped" },
   async ({

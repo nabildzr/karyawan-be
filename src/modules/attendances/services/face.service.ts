@@ -66,6 +66,7 @@ const shouldRetryWithFallback = (
 
 // & Verify live face image against enrolled face template for attendance.
 // % Verifikasi wajah live terhadap template wajah terdaftar untuk absensi.
+/** Mengekspor verifyFaceForAttendance untuk kebutuhan modul ini. */
 export const verifyFaceForAttendance = async (
   userId: string,
   liveImageFile: File,
@@ -115,6 +116,7 @@ export const verifyFaceForAttendance = async (
 
 // & Generate BLIP caption text from captured image.
 // % Generate teks caption BLIP dari gambar hasil capture.
+/** Mengekspor generateBlipCaption untuk kebutuhan modul ini. */
 export const generateBlipCaption = async (imageFile: File) => {
   try {
     // & Prepare request headers and optional token.
@@ -183,6 +185,7 @@ export const generateBlipCaption = async (imageFile: File) => {
 
 // & Verify face match and return confidence payload for attendance flow.
 // % Verifikasi kecocokan wajah dan kembalikan payload confidence untuk flow absensi.
+/** Mengekspor verifyFace untuk kebutuhan modul ini. */
 export const verifyFace = async (userId: string, liveImageFile: File) => {
   const faceMatch = await verifyFaceForAttendance(userId, liveImageFile);
 

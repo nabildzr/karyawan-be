@@ -1,15 +1,18 @@
 // * File ini menangani operasi tulis untuk module working schedules.
 
-import { WorkingScheduleService as LegacyWorkingScheduleService } from "../legacy";
+import { WorkingScheduleService } from "../implementation";
 
 // & Create working schedule.
 // % Buat jadwal kerja.
-export const create = LegacyWorkingScheduleService.create;
+/** Mengekspor create untuk kebutuhan modul ini. */
+export const create = WorkingScheduleService.create;
 
 // & Update working schedule.
 // % Update jadwal kerja.
-export const update = LegacyWorkingScheduleService.update;
+/** Mengekspor update untuk kebutuhan modul ini. */
+export const update = WorkingScheduleService.update;
 
 // & Assign employees into working schedule.
 // % Tetapkan karyawan ke jadwal kerja.
-export const assignEmployees = LegacyWorkingScheduleService.assignEmployees;
+/** Mengekspor assignEmployees untuk kebutuhan modul ini. */
+export const assignEmployees = WorkingScheduleService.assignEmployees;

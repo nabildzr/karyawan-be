@@ -9,6 +9,7 @@ const redis = new Redis({
 
 
 // Bungkus jadi helper yang enak dipake
+/** Mengekspor cacheHelper untuk kebutuhan modul ini. */
 export const cacheHelper = {
   async get<T>(key: string): Promise<T | null> {
     const raw = await redis.get(key)
@@ -32,5 +33,6 @@ export const cacheHelper = {
 }
 
 // Inject ke context Elysia lewat .decorate()
+/** Mengekspor redisPlugin untuk kebutuhan modul ini. */
 export const redisPlugin = new Elysia({ name: "redis" })
   .decorate("cache", cacheHelper)

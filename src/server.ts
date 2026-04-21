@@ -5,26 +5,29 @@ import swagger from "@elysiajs/swagger";
 import { Elysia } from "elysia";
 import { constants } from "./config/constants";
 import { authPlugin } from "./middleware/auth";
-import { assessmentCategoriesRoutes } from "./modules/assessmentCategories";
+import { assessmentCategoriesRoutes } from "./modules/assessmentCategories/assessmentCategories.route";
 import { assessmentsRoutes } from "./modules/assessments";
 import { attendanceRoutes } from "./modules/attendances";
-import { auditLogRoutes } from "./modules/auditLogs";
-import { authRoutes } from "./modules/auth";
-import { divisionRoutes } from "./modules/divisions";
-import { employeeRoutes } from "./modules/employees";
-import { faceRoutes } from "./modules/faces";
-import { geofenceRoutes } from "./modules/geofences";
-import { holidayRoutes } from "./modules/holidays";
+import { auditLogRoutes } from "./modules/auditLogs/auditLogs.route";
+import { authRoutes } from "./modules/auth/auth.route";
+import { contohmoduleRoutes } from "./modules/contohmodule/contohmodule.route";
+import { dashboardRoutes } from "./modules/dashboard";
+import { divisionRoutes } from "./modules/divisions/divisions.route";
+import { employeeRoutes } from "./modules/employees/employees.route";
+import { faceRoutes } from "./modules/faces/faces.route";
+import { geofenceRoutes } from "./modules/geofences/geofences.route";
+import { holidayRoutes } from "./modules/holidays/holidays.route";
+import { notificationRoutes } from "./modules/notifications/notifications.route";
 import { pointsRoutes } from "./modules/points";
-import { positionRoutes } from "./modules/positions";
+import { positionRoutes } from "./modules/positions/positions.route";
 import { rbacRoutes } from "./modules/rbac";
-import { RootHandler } from "./modules/root";
+import { RootHandler } from "./modules/root/root.route";
 import { submissionRoutes } from "./modules/submissions";
 import { workingScheduleRoutes } from "./modules/workingSchedules";
-import { notificationRoutes } from "./modules/notifications";
 
 // & Create versioned API server instance using configured API version.
 // % Buat instance server API bertag versi menggunakan versi API pada konfigurasi.
+/** Mengekspor server_v1 untuk kebutuhan modul ini. */
 export const server_v1 = new Elysia({
   prefix: `/v${constants.api.version}`,
 });
@@ -40,9 +43,11 @@ server_v1
   // % Route publik tidak memerlukan token autentikasi.
   .use(RootHandler)
   .use(authRoutes)
+  .use(contohmoduleRoutes)
 
   // & Protected routes enforce access level using module-level beforeHandle guards.
   // % Route terproteksi menerapkan level akses lewat guard beforeHandle per modul.
+  .use(dashboardRoutes)
   .use(holidayRoutes)
   .use(employeeRoutes)
   .use(faceRoutes)

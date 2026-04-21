@@ -11,6 +11,7 @@ import {
 } from "./model";
 import { WorkingScheduleService } from "./service";
 
+/** Mengekspor workingScheduleRoutes untuk kebutuhan modul ini. */
 export const workingScheduleRoutes = new Elysia({
   prefix: "/working-schedules",
   detail: { tags: ["Working Schedules"] },

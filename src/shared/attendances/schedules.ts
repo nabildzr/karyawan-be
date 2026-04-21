@@ -3,6 +3,7 @@
 // % Modul ini berisi utilitas jadwal/hari untuk logika bisnis absensi.
 import { JAKARTA_UTC_OFFSET } from "../../config/timezone";
 
+/** Mendefinisikan alias tipe untuk MobileSummaryDayStatus. */
 export type MobileSummaryDayStatus =
   | "completed"
   | "absent"
@@ -10,11 +11,13 @@ export type MobileSummaryDayStatus =
   | "off"
   | "upcoming";
 
+/** Mendefinisikan alias tipe untuk ScheduleRangeValidationIssueReason. */
 export type ScheduleRangeValidationIssueReason =
   | "NO_SCHEDULE_DAY"
   | "INACTIVE_SCHEDULE_DAY"
   | "MISSING_SHIFT";
 
+/** Mendefinisikan alias tipe untuk ScheduleRangeValidationIssue. */
 export type ScheduleRangeValidationIssue = {
   dateKey: string;
   dayName: string;
@@ -23,6 +26,7 @@ export type ScheduleRangeValidationIssue = {
 
 // & Mapping from English weekday names to Indonesian labels.
 // % Pemetaan nama hari berbahasa Inggris ke label Indonesia.
+/** Mengekspor EN_TO_ID untuk kebutuhan modul ini. */
 export const EN_TO_ID: Record<string, string> = {
   Monday: "Senin",
   Tuesday: "Selasa",
@@ -35,6 +39,7 @@ export const EN_TO_ID: Record<string, string> = {
 
 // & Resolve Indonesian weekday name from a date in provided timezone.
 // % Ambil nama hari Indonesia dari tanggal pada timezone yang diberikan.
+/** Mengekspor getDayNameID untuk kebutuhan modul ini. */
 export const getDayNameID = (date: Date, timezone: string): string => {
   const en = date.toLocaleDateString("en-US", {
     weekday: "long",
@@ -63,6 +68,7 @@ const toDateKeyByTimezone = (date: Date, timezone: string) =>
 
 // & Find matching schedule day by date with EN/ID day-name tolerance.
 // % Cari hari jadwal yang cocok berdasarkan tanggal dengan toleransi nama EN/ID.
+/** Mengekspor findScheduleDayByDate untuk kebutuhan modul ini. */
 export const findScheduleDayByDate = <T extends { dayOfWeek: string }>(
   days: T[] = [],
   date: Date,
@@ -84,6 +90,7 @@ export const findScheduleDayByDate = <T extends { dayOfWeek: string }>(
 
 // & Alias helper for today's schedule day lookup.
 // % Helper alias untuk mencari jadwal hari ini.
+/** Mengekspor findScheduleDayForToday untuk kebutuhan modul ini. */
 export const findScheduleDayForToday = <T extends { dayOfWeek: string }>(
   days: T[] = [],
   date: Date,
@@ -92,6 +99,7 @@ export const findScheduleDayForToday = <T extends { dayOfWeek: string }>(
 
 // & Type guard that ensures schedule day is active and has shift data.
 // % Type guard untuk memastikan hari jadwal aktif dan memiliki data shift.
+/** Mengekspor hasActiveShiftOnDay untuk kebutuhan modul ini. */
 export const hasActiveShiftOnDay = <
   T extends { isActive?: boolean | null; shift?: unknown | null },
 >(
@@ -101,6 +109,7 @@ export const hasActiveShiftOnDay = <
 
 // & Scan date range and return first invalid schedule configuration encountered.
 // % Pindai rentang tanggal dan kembalikan konfigurasi jadwal pertama yang tidak valid.
+/** Mengekspor findFirstInvalidScheduleDateInRange untuk kebutuhan modul ini. */
 export const findFirstInvalidScheduleDateInRange = <
   T extends {
     dayOfWeek: string;
@@ -146,6 +155,7 @@ export const findFirstInvalidScheduleDateInRange = <
 
 // & Resolve mobile calendar status and note from schedule/holiday/attendance inputs.
 // % Tentukan status dan catatan kalender mobile dari input jadwal/libur/absensi.
+/** Mengekspor resolveMobileSummaryDayStatus untuk kebutuhan modul ini. */
 export const resolveMobileSummaryDayStatus = (params: {
   hasActiveScheduleDay: boolean;
   isHoliday: boolean;
@@ -208,6 +218,7 @@ export const resolveMobileSummaryDayStatus = (params: {
 
 // & Parse HH:mm string into hour and minute numbers.
 // % Parse string HH:mm menjadi angka jam dan menit.
+/** Mengekspor parseTime untuk kebutuhan modul ini. */
 export const parseTime = (t: string) => {
   const [h, m] = t.split(":").map(Number);
   return { hours: h, minutes: m };
@@ -222,6 +233,7 @@ interface CheckInPunctualityMetrics {
 
 // & Calculate punctuality metrics for check-in based on expected schedule time.
 // % Hitung metrik ketepatan waktu check-in berdasarkan jam jadwal.
+/** Mengekspor calculateCheckInPunctuality untuk kebutuhan modul ini. */
 export const calculateCheckInPunctuality = (
   actualCheckIn: Date | null | undefined,
   expectedCheckIn: Date | null | undefined,
@@ -249,6 +261,7 @@ export const calculateCheckInPunctuality = (
 
 // & Build business day boundaries for a date based on timezone day key.
 // % Bangun batas hari bisnis untuk tanggal berdasarkan day key timezone.
+/** Mengekspor getDayRangeByTimezone untuk kebutuhan modul ini. */
 export const getDayRangeByTimezone = (date: Date, timezone: string) => {
   const dayKey = date.toLocaleDateString("sv-SE", { timeZone: timezone });
   const dayStart = new Date(`${dayKey}T00:00:00.000${JAKARTA_UTC_OFFSET}`);
@@ -258,18 +271,21 @@ export const getDayRangeByTimezone = (date: Date, timezone: string) => {
 
 // & Convert business date key into start-of-day Date using Jakarta offset.
 // % Ubah date key bisnis menjadi Date awal hari dengan offset Jakarta.
+/** Mengekspor toBusinessStartOfDay untuk kebutuhan modul ini. */
 export const toBusinessStartOfDay = (dateKey: string) => {
   return new Date(`${dateKey}T00:00:00.000${JAKARTA_UTC_OFFSET}`);
 };
 
 // & Convert business date key into end-of-day Date using Jakarta offset.
 // % Ubah date key bisnis menjadi Date akhir hari dengan offset Jakarta.
+/** Mengekspor toBusinessEndOfDay untuk kebutuhan modul ini. */
 export const toBusinessEndOfDay = (dateKey: string) => {
   return new Date(`${dateKey}T23:59:59.999${JAKARTA_UTC_OFFSET}`);
 };
 
 // & Compute shift start/end window and handle cross-day end correctly.
 // % Hitung rentang mulai/akhir shift dan tangani akhir shift lintas hari.
+/** Mengekspor getShiftWindow untuk kebutuhan modul ini. */
 export const getShiftWindow = (
   now: Date,
   shift: { startTime: string; endTime: string; isCrossDay: boolean },

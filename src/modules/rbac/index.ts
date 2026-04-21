@@ -11,6 +11,7 @@ import {
 } from "./model";
 import { RbacService } from "./service";
 
+/** Mengekspor rbacRoutes untuk kebutuhan modul ini. */
 export const rbacRoutes = new Elysia({
   prefix: "/rbac",
   detail: { tags: ["RBAC"] },

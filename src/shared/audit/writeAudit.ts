@@ -12,6 +12,10 @@ type AuditDbClient = {
 
 // & Write audit log row with optional db override for testability.
 // % Tulis baris audit log dengan override db opsional agar mudah dites.
+/**
+ * Menjalankan tanggung jawab utama fungsi writeAuditLog.
+ * @param params Parameter yang digunakan dalam proses ini.
+ */
 export async function writeAuditLog(params: {
   actor: AuditActor;
   action: string;

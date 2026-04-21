@@ -1,19 +1,23 @@
 // * File ini menangani operasi tulis untuk module assessments.
 
-import { AssessmentsService as LegacyAssessmentsService } from "../legacy";
+import { AssessmentsService } from "../implementation";
 
 // & Create assessment data.
 // % Buat data penilaian.
-export const create = LegacyAssessmentsService.create;
+/** Mengekspor create untuk kebutuhan modul ini. */
+export const create = AssessmentsService.create;
 
 // & Update assessment data.
 // % Update data penilaian.
-export const update = LegacyAssessmentsService.update;
+/** Mengekspor update untuk kebutuhan modul ini. */
+export const update = AssessmentsService.update;
 
 // & Export individual assessment PDF.
 // % Ekspor PDF penilaian individual.
-export const exportIndividualPDF = LegacyAssessmentsService.exportIndividualPDF;
+/** Mengekspor exportIndividualPDF untuk kebutuhan modul ini. */
+export const exportIndividualPDF = AssessmentsService.exportIndividualPDF;
 
 // & Export assessment report in file format.
 // % Ekspor laporan penilaian dalam format file.
-export const exportReport = LegacyAssessmentsService.exportReport;
+/** Mengekspor exportReport untuk kebutuhan modul ini. */
+export const exportReport = AssessmentsService.exportReport;

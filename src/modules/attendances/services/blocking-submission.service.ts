@@ -10,6 +10,7 @@ import {
 
 // & Find a single blocking submission for one user in a date range.
 // % Cari satu pengajuan yang memblokir untuk satu user pada rentang tanggal.
+/** Mengekspor findBlockingSubmission untuk kebutuhan modul ini. */
 export const findBlockingSubmission = async (
   userId: string,
   dayStart: Date,
@@ -21,6 +22,7 @@ export const findBlockingSubmission = async (
 
 // & Find blocking submissions map for multiple users in a date range.
 // % Cari peta pengajuan yang memblokir untuk banyak user pada rentang tanggal.
+/** Mengekspor findBlockingSubmissionByUserIds untuk kebutuhan modul ini. */
 export const findBlockingSubmissionByUserIds = async (
   userIds: string[],
   dayStart: Date,

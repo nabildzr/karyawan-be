@@ -6,6 +6,10 @@ import { writeAuditLog as writeBaseAuditLog } from "./writeAudit";
 
 // & Persist geofence-specific audit action by delegating to base writer.
 // % Simpan aksi audit khusus geofence dengan mendelegasikan ke penulis dasar.
+/**
+ * Menjalankan tanggung jawab utama fungsi writeAuditLog.
+ * @param params Parameter yang digunakan dalam proses ini.
+ */
 export async function writeAuditLog(params: {
   actor: AuditActor;
   action: string;

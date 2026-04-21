@@ -29,6 +29,7 @@ const parseDateOrThrow = (value: string, fieldName: string) => {
 
 // & Create manual attendance entry by admin with optional submission bypass.
 // % Buat entri absensi manual oleh admin dengan opsi bypass pengajuan.
+/** Mengekspor manualAttendance untuk kebutuhan modul ini. */
 export const manualAttendance = async (
   adminUserId: string,
   payload: ManualAttendancePayload,
@@ -194,6 +195,7 @@ export const manualAttendance = async (
 
 // & Correct existing attendance by admin with audit and submission safeguards.
 // % Koreksi data absensi oleh admin dengan audit dan pengaman pengajuan.
+/** Mengekspor correctAttendance untuk kebutuhan modul ini. */
 export const correctAttendance = async (
   adminUserId: string,
   attendanceId: string,
@@ -336,6 +338,7 @@ export const correctAttendance = async (
 
 // & Get paginated attendance list for admin table/report screens.
 // % Ambil daftar absensi terpaginasikan untuk tabel/laporan admin.
+/** Mengekspor getAll untuk kebutuhan modul ini. */
 export const getAll = async (options: {
   page?: number;
   limit?: number;
@@ -455,6 +458,7 @@ export const getAll = async (options: {
 
 // & Get full attendance detail payload by id for admin detail page.
 // % Ambil payload detail absensi lengkap berdasarkan id untuk halaman detail admin.
+/** Mengekspor getById untuk kebutuhan modul ini. */
 export const getById = async (id: string) => {
   const attendance = await prisma.attendances.findUnique({
     where: { id },
@@ -519,6 +523,7 @@ export const getById = async (id: string) => {
 
 // & Aggregate attendance counters for dashboard summary cards.
 // % Agregasikan counter absensi untuk kartu ringkasan dashboard.
+/** Mengekspor getSummaryStats untuk kebutuhan modul ini. */
 export const getSummaryStats = async (options: {
   startDate?: string;
   endDate?: string;
@@ -550,6 +555,7 @@ export const getSummaryStats = async (options: {
 
 // & Export attendance data into CSV/XLSX with selected filters.
 // % Ekspor data absensi ke CSV/XLSX sesuai filter yang dipilih.
+/** Mengekspor exportAttendances untuk kebutuhan modul ini. */
 export const exportAttendances = async (options: {
   startDate: string;
   endDate: string;

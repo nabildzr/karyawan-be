@@ -3,6 +3,7 @@
 import { create, deleteById, updateStatus } from "./create";
 import { getAll, getDetailById, getMine } from "./report";
 
+/** Mengekspor SubmissionService untuk kebutuhan modul ini. */
 export const SubmissionService = {
   // & List submissions.
   // % Daftar pengajuan.

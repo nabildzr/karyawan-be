@@ -194,6 +194,7 @@ const getPreviousMonthWindow = () => {
   };
 };
 
+/** Mengekspor pointsCronPlugin untuk kebutuhan modul ini. */
 export const pointsCronPlugin = new Elysia()
   .onStart(async () => {
     try {

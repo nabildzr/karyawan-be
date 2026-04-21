@@ -9,16 +9,18 @@ import { TransactionType } from "../../../generated/prisma/enums";
 import { getDayRangeByTimezone } from "../../../shared/attendances/schedules";
 import type { AuditActor } from "../../../shared/audit/actor";
 import { writeAuditLog } from "../../../shared/audit/writeAudit";
-import { NotificationService } from "../../notifications/service";
-import { PointsRepository } from "../repository";
+import { NotificationService } from "../../notifications/notifications.service";
 import {
   INTEGRITY_THRESHOLDS,
   getIntegrityLevel,
   getNextIntegrityLevel,
 } from "../utils/levels";
 
+type PointsRepository = any;
 
 
+
+/** Mengekspor createAnalyticsService untuk kebutuhan modul ini. */
 export const createAnalyticsService = (repo: PointsRepository, db: any) => ({
   // & Build paginated leaderboard enriched with total earned points per user.
   // % Bangun leaderboard terpaginasi dengan tambahan total poin yang pernah didapat user.
@@ -191,16 +193,19 @@ export const createAnalyticsService = (repo: PointsRepository, db: any) => ({
 
 
 
+/** Mendefinisikan alias tipe untuk TransactionTypeValue. */
 export type TransactionTypeValue =
   (typeof TransactionType)[keyof typeof TransactionType];
 
 
 
+/** Mengekspor toPercentage untuk kebutuhan modul ini. */
 export const toPercentage = (value: number) =>
   Math.min(100, Math.max(0, Number(value.toFixed(2))));
 
 
 
+/** Mengekspor createLedgerService untuk kebutuhan modul ini. */
 export const createLedgerService = (repo: PointsRepository, db: any) => ({
   // & Record a point transaction and update denormalized user wallet fields.
   // % Catat transaksi poin dan update field dompet denormalized pada user.
@@ -505,10 +510,12 @@ export const createLedgerService = (repo: PointsRepository, db: any) => ({
 
 
 
+/** Mengekspor MS_PER_DAY untuk kebutuhan modul ini. */
 export const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 
 
+/** Mengekspor SUPPORTED_ITEM_CONDITION_FIELDS untuk kebutuhan modul ini. */
 export const SUPPORTED_ITEM_CONDITION_FIELDS = [
   "attendance.status",
   "attendance.lateMinutes",
@@ -516,6 +523,7 @@ export const SUPPORTED_ITEM_CONDITION_FIELDS = [
 
 
 
+/** Mengekspor FALLBACK_ITEM_TYPE_CONDITIONS untuk kebutuhan modul ini. */
 export const FALLBACK_ITEM_TYPE_CONDITIONS: Record<
   string,
   {
@@ -547,6 +555,7 @@ export const FALLBACK_ITEM_TYPE_CONDITIONS: Record<
 
 
 
+/** Mengekspor normalizeOptionalString untuk kebutuhan modul ini. */
 export const normalizeOptionalString = (value: unknown): string | null => {
   if (value == null) return null;
   const normalized = String(value).trim();
@@ -555,6 +564,7 @@ export const normalizeOptionalString = (value: unknown): string | null => {
 
 
 
+/** Mengekspor parseDateOrNull untuk kebutuhan modul ini. */
 export const parseDateOrNull = (value: unknown, fieldName: string): Date | null => {
   const normalized = normalizeOptionalString(value);
   if (!normalized) return null;
@@ -569,6 +579,7 @@ export const parseDateOrNull = (value: unknown, fieldName: string): Date | null 
 
 
 
+/** Mengekspor normalizeMaxPerMonth untuk kebutuhan modul ini. */
 export const normalizeMaxPerMonth = (value: unknown): number | null => {
   if (value == null || value === "") return null;
 
@@ -582,6 +593,7 @@ export const normalizeMaxPerMonth = (value: unknown): number | null => {
 
 
 
+/** Mengekspor normalizeConditionValue untuk kebutuhan modul ini. */
 export const normalizeConditionValue = (
   conditionField: (typeof SUPPORTED_ITEM_CONDITION_FIELDS)[number],
   rawValue: string,
@@ -622,6 +634,7 @@ export const normalizeConditionValue = (
 
 
 
+/** Mengekspor resolveNormalizedCondition untuk kebutuhan modul ini. */
 export const resolveNormalizedCondition = (params: {
   payload: any;
   itemType: string;
@@ -691,6 +704,7 @@ export const resolveNormalizedCondition = (params: {
 
 
 
+/** Mengekspor calculateRemainingDays untuk kebutuhan modul ini. */
 export const calculateRemainingDays = (expiresAt: Date, now = new Date()) => {
   const diff = expiresAt.getTime() - now.getTime();
   if (diff <= 0) return 0;
@@ -699,6 +713,7 @@ export const calculateRemainingDays = (expiresAt: Date, now = new Date()) => {
 
 
 
+/** Mengekspor getMonthRange untuk kebutuhan modul ini. */
 export const getMonthRange = (sourceDate = new Date()) => {
   const start = new Date(sourceDate.getFullYear(), sourceDate.getMonth(), 1, 0, 0, 0, 0);
   const end = new Date(sourceDate.getFullYear(), sourceDate.getMonth() + 1, 1, 0, 0, 0, 0);
@@ -707,6 +722,7 @@ export const getMonthRange = (sourceDate = new Date()) => {
 
 
 
+/** Mengekspor createMarketplaceService untuk kebutuhan modul ini. */
 export const createMarketplaceService = (repo: PointsRepository, db: any) => {
   const broadcastNewMarketplaceItem = (item: {
     id: string;
@@ -1042,6 +1058,15 @@ export const createMarketplaceService = (repo: PointsRepository, db: any) => {
   };
 };
 
+/**
+ * Menjalankan tanggung jawab utama fungsi applyTokenRetroactiveToToday.
+ * @param token Parameter yang digunakan dalam proses ini.
+ * @param userId Parameter yang digunakan dalam proses ini.
+ * @param actor Parameter yang digunakan dalam proses ini.
+ * @param ledgerService Parameter yang digunakan dalam proses ini.
+ * @param db Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export async function applyTokenRetroactiveToToday(
   token: any,
   userId: string,
@@ -1253,6 +1278,7 @@ export async function applyTokenRetroactiveToToday(
 
 
 
+/** Mendefinisikan alias tipe untuk AttendanceStatus. */
 export type AttendanceStatus =
   | "PRESENT"
   | "LATE"
@@ -1263,6 +1289,7 @@ export type AttendanceStatus =
 
 
 
+/** Mendefinisikan kontrak data untuk interface AttendanceContext. */
 export interface AttendanceContext {
   checkInTime?: Date | null;
   checkOutTime?: Date | null;
@@ -1277,6 +1304,7 @@ export interface AttendanceContext {
 
 
 
+/** Mendefinisikan alias tipe untuk MatchedRule. */
 export type MatchedRule = {
   id: string;
   ruleName: string;
@@ -1288,6 +1316,7 @@ export type MatchedRule = {
 
 
 
+/** Mengekspor createRuleEngineService untuk kebutuhan modul ini. */
 export const createRuleEngineService = (repo: PointsRepository) => ({
   // & Evaluate active rules for a user role and attendance context.
   // % Evaluasi aturan aktif untuk role user dan konteks absensi.
@@ -1343,6 +1372,12 @@ export const createRuleEngineService = (repo: PointsRepository) => ({
   },
 });
 
+/**
+ * Menjalankan tanggung jawab utama fungsi matchesRule.
+ * @param rule Parameter yang digunakan dalam proses ini.
+ * @param context Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function matchesRule(rule: any, context: AttendanceContext) {
   const field = normalizeField(String(rule.conditionField || ""));
   const op = normalizeOperator(String(rule.conditionOp || ""));
@@ -1370,6 +1405,12 @@ export function matchesRule(rule: any, context: AttendanceContext) {
 
 
 
+/**
+ * Menjalankan tanggung jawab utama fungsi getLeftValue.
+ * @param field Parameter yang digunakan dalam proses ini.
+ * @param context Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function getLeftValue(field: string, context: AttendanceContext) {
   const normalizedStatus = context.attendanceStatus?.toUpperCase();
   const normalizedCheckOutStatus = context.statusCheckOut?.toUpperCase();
@@ -1443,10 +1484,20 @@ export function getLeftValue(field: string, context: AttendanceContext) {
   return undefined;
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi normalizeField.
+ * @param field Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function normalizeField(field: string) {
   return field.trim().toLowerCase();
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi normalizeOperator.
+ * @param op Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function normalizeOperator(op: string) {
   const normalized = op.trim().toLowerCase();
   // ? eq = equals
@@ -1456,6 +1507,13 @@ export function normalizeOperator(op: string) {
   return normalized;
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi compareBoolean.
+ * @param left Parameter yang digunakan dalam proses ini.
+ * @param op Parameter yang digunakan dalam proses ini.
+ * @param right Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function compareBoolean(left: boolean, op: string, right: string) {
   const normalizedRight = parseBoolean(right);
   if (normalizedRight == null) return false;
@@ -1466,6 +1524,13 @@ export function compareBoolean(left: boolean, op: string, right: string) {
   return false;
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi compareString.
+ * @param left Parameter yang digunakan dalam proses ini.
+ * @param op Parameter yang digunakan dalam proses ini.
+ * @param right Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function compareString(left: string, op: string, right: string) {
   const l = left.trim().toUpperCase();
   const r = right.trim().toUpperCase();
@@ -1482,6 +1547,13 @@ export function compareString(left: string, op: string, right: string) {
   return false;
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi compareNumber.
+ * @param left Parameter yang digunakan dalam proses ini.
+ * @param op Parameter yang digunakan dalam proses ini.
+ * @param right Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function compareNumber(left: number, op: string, right: string) {
   if (op === "between") {
     const [minRaw, maxRaw] = splitRangeValue(right);
@@ -1503,6 +1575,13 @@ export function compareNumber(left: number, op: string, right: string) {
   return false;
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi compareTime.
+ * @param left Parameter yang digunakan dalam proses ini.
+ * @param op Parameter yang digunakan dalam proses ini.
+ * @param right Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function compareTime(left: string, op: string, right: string) {
   const leftMin = hhmmToMinute(left);
   const rightMin = hhmmToMinute(right);
@@ -1526,6 +1605,11 @@ export function compareTime(left: string, op: string, right: string) {
   return false;
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi splitRangeValue.
+ * @param value Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function splitRangeValue(value: string): [string, string] {
   if (value.includes(",")) {
     const [minRaw = "", maxRaw = ""] = value.split(",");
@@ -1536,12 +1620,22 @@ export function splitRangeValue(value: string): [string, string] {
   return [minRaw.trim(), maxRaw.trim()];
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi toHHMM.
+ * @param date Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function toHHMM(date: Date) {
   const hh = String(date.getHours()).padStart(2, "0");
   const mm = String(date.getMinutes()).padStart(2, "0");
   return `${hh}:${mm}`;
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi hhmmToMinute.
+ * @param value Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function hhmmToMinute(value: string) {
   const parts = value.split(":").map((v) => v.trim());
   const h = parts[0];
@@ -1554,6 +1648,11 @@ export function hhmmToMinute(value: string) {
   return hour * 60 + minute;
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi parseBoolean.
+ * @param value Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function parseBoolean(value: string): boolean | null {
   const normalized = value.trim().toLowerCase();
   if (["true", "1", "yes", "ya"].includes(normalized)) return true;
@@ -1563,6 +1662,7 @@ export function parseBoolean(value: string): boolean | null {
 
 
 
+/** Mengekspor SYSTEM_ACTOR untuk kebutuhan modul ini. */
 export const SYSTEM_ACTOR: AuditActor = {
   id: "SYSTEM",
   role: "SYSTEM",
@@ -1570,6 +1670,7 @@ export const SYSTEM_ACTOR: AuditActor = {
 
 
 
+/** Mendefinisikan alias tipe untuk AttendanceCondition. */
 export type AttendanceCondition = {
   status: string;
   lateMinutes?: number | null;
@@ -1578,6 +1679,7 @@ export type AttendanceCondition = {
 
 
 
+/** Mendefinisikan alias tipe untuk TokenMatchResult. */
 export type TokenMatchResult = {
   statusOverride: "PRESENT" | "LEAVE";
   reason: string;
@@ -1588,6 +1690,7 @@ export type TokenMatchResult = {
 
 
 
+/** Mendefinisikan alias tipe untuk TokenItemSnapshot. */
 export type TokenItemSnapshot = {
   itemType?: string | null;
   itemName?: string | null;
@@ -1597,6 +1700,7 @@ export type TokenItemSnapshot = {
 
 
 
+/** Mendefinisikan alias tipe untuk TokenMatchTraceMeta. */
 export type TokenMatchTraceMeta = {
   tokenId?: string;
   itemType?: string | null;
@@ -1606,6 +1710,7 @@ export type TokenMatchTraceMeta = {
 
 
 
+/** Mengekspor logTokenMatchTrace untuk kebutuhan modul ini. */
 export const logTokenMatchTrace = (
   step: string,
   payload: Record<string, unknown>,
@@ -1620,16 +1725,20 @@ export const logTokenMatchTrace = (
 
 
 
+/** Mengekspor LATE_ALLOWANCE_TYPE_REGEX untuk kebutuhan modul ini. */
 export const LATE_ALLOWANCE_TYPE_REGEX = /late_allowance_(\d+)m/i;
 
 
+/** Mengekspor LATE_ALLOWANCE_NAME_REGEX untuk kebutuhan modul ini. */
 export const LATE_ALLOWANCE_NAME_REGEX = /(\d+)\s*menit/i;
 
 
+/** Mengekspor ATTENDANCE_LOOKUP_RETRY_DELAYS_MS untuk kebutuhan modul ini. */
 export const ATTENDANCE_LOOKUP_RETRY_DELAYS_MS = [0, 50, 125] as const;
 
 
 
+/** Mendefinisikan alias tipe untuk AttendanceLookupSnapshot. */
 export type AttendanceLookupSnapshot = {
   id: string;
   employee: {
@@ -1643,15 +1752,18 @@ export type AttendanceLookupSnapshot = {
 
 
 
+/** Mengekspor wait untuk kebutuhan modul ini. */
 export const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 
 
+/** Mengekspor normalizeStatus untuk kebutuhan modul ini. */
 export const normalizeStatus = (value: unknown) =>
   String(value ?? "").trim().toUpperCase();
 
 
 
+/** Mengekspor parseLateMinutes untuk kebutuhan modul ini. */
 export const parseLateMinutes = (value: unknown): number | null => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return null;
@@ -1661,6 +1773,7 @@ export const parseLateMinutes = (value: unknown): number | null => {
 
 
 
+/** Mengekspor getLateMinutesFromAttendance untuk kebutuhan modul ini. */
 export const getLateMinutesFromAttendance = (
   attendance: Pick<
     AttendanceLookupSnapshot,
@@ -1679,6 +1792,7 @@ export const getLateMinutesFromAttendance = (
 
 
 
+/** Mengekspor resolveLateMinutesForMatching untuk kebutuhan modul ini. */
 export const resolveLateMinutesForMatching = (
   condition: AttendanceCondition,
   attendance: Pick<
@@ -1736,6 +1850,7 @@ export const resolveLateMinutesForMatching = (
 
 
 
+/** Mengekspor isTokenStillValidUntilEndOfDay untuk kebutuhan modul ini. */
 export const isTokenStillValidUntilEndOfDay = (expiresAt: Date, now: Date) => {
   const { dayEnd } = getDayRangeByTimezone(expiresAt, DEFAULT_TIMEZONE);
   return dayEnd.getTime() > now.getTime();
@@ -1743,6 +1858,7 @@ export const isTokenStillValidUntilEndOfDay = (expiresAt: Date, now: Date) => {
 
 
 
+/** Mengekspor parsePositiveInteger untuk kebutuhan modul ini. */
 export const parsePositiveInteger = (raw: string): number | null => {
   const normalized = raw.trim().replace(/^['\"]|['\"]$/g, "");
   const parsed = Number(normalized);
@@ -1752,6 +1868,7 @@ export const parsePositiveInteger = (raw: string): number | null => {
 
 
 
+/** Mengekspor resolveLateAllowanceThreshold untuk kebutuhan modul ini. */
 export const resolveLateAllowanceThreshold = (
   item: TokenItemSnapshot | undefined,
 ): number | null => {
@@ -1774,6 +1891,7 @@ export const resolveLateAllowanceThreshold = (
 
 // & Build token interceptor service used by attendance rule flow.
 // % Bangun service interceptor token yang dipakai alur rule absensi.
+/** Mengekspor createTokenInterceptorService untuk kebutuhan modul ini. */
 export const createTokenInterceptorService = (repo: PointsRepository, db: any) => ({
   // & Apply best matched token and mark token as used. Also exposes matched late threshold.
   // % Terapkan token paling cocok lalu tandai token sebagai terpakai. Ekspor juga batas menit telat yang cocok.
@@ -2141,6 +2259,13 @@ export const createTokenInterceptorService = (repo: PointsRepository, db: any) =
   },
 });
 
+/**
+ * Menjalankan tanggung jawab utama fungsi matchTokenToCondition.
+ * @param item Parameter yang digunakan dalam proses ini.
+ * @param condition Parameter yang digunakan dalam proses ini.
+ * @param traceMeta Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function matchTokenToCondition(
   item: TokenItemSnapshot | undefined,
   condition: AttendanceCondition,
@@ -2214,6 +2339,13 @@ export function matchTokenToCondition(
   return itemNameMatch;
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi matchTokenByConditionField.
+ * @param item Parameter yang digunakan dalam proses ini.
+ * @param condition Parameter yang digunakan dalam proses ini.
+ * @param traceMeta Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function matchTokenByConditionField(
   item: TokenItemSnapshot | undefined,
   condition: AttendanceCondition,
@@ -2398,6 +2530,13 @@ export function matchTokenByConditionField(
   return null;
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi matchLegacyItemType.
+ * @param itemType Parameter yang digunakan dalam proses ini.
+ * @param condition Parameter yang digunakan dalam proses ini.
+ * @param traceMeta Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function matchLegacyItemType(
   itemType: string | null | undefined,
   condition: AttendanceCondition,
@@ -2556,6 +2695,13 @@ export function matchLegacyItemType(
   return null;
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi matchByItemName.
+ * @param itemName Parameter yang digunakan dalam proses ini.
+ * @param condition Parameter yang digunakan dalam proses ini.
+ * @param traceMeta Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export function matchByItemName(
   itemName: string | null | undefined,
   condition: AttendanceCondition,
@@ -2664,6 +2810,7 @@ export function matchByItemName(
 
 // & Build token inventory service for listing and summary operations.
 // % Bangun service inventory token untuk operasi listing dan ringkasan.
+/** Mengekspor createTokenInventoryService untuk kebutuhan modul ini. */
 export const createTokenInventoryService = (repo: PointsRepository, db: any) => ({
   // & Return paginated inventory while reconciling stale AVAILABLE tokens.
   // % Kembalikan inventory terpaginasi sambil sinkronisasi token AVAILABLE yang sudah kedaluwarsa.

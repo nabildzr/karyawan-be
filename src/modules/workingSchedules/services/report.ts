@@ -1,15 +1,18 @@
 // * File ini menangani operasi baca/report untuk module working schedules.
 
-import { WorkingScheduleService as LegacyWorkingScheduleService } from "../legacy";
+import { WorkingScheduleService } from "../implementation";
 
 // & Get all working schedules.
 // % Ambil semua jadwal kerja.
-export const findAll = LegacyWorkingScheduleService.findAll;
+/** Mengekspor findAll untuk kebutuhan modul ini. */
+export const findAll = WorkingScheduleService.findAll;
 
 // & Get working schedule detail by id.
 // % Ambil detail jadwal kerja berdasarkan id.
-export const findById = LegacyWorkingScheduleService.findById;
+/** Mengekspor findById untuk kebutuhan modul ini. */
+export const findById = WorkingScheduleService.findById;
 
 // & Get mobile summary for employee schedule context.
 // % Ambil ringkasan mobile untuk konteks jadwal karyawan.
-export const getMobileSummary = LegacyWorkingScheduleService.getMobileSummary;
+/** Mengekspor getMobileSummary untuk kebutuhan modul ini. */
+export const getMobileSummary = WorkingScheduleService.getMobileSummary;

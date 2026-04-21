@@ -6,6 +6,7 @@
 
 
 
+/** Mendefinisikan kontrak data untuk interface CheckInPayload. */
 export interface CheckInPayload {
   image: File;
   latitude?: number;
@@ -14,6 +15,7 @@ export interface CheckInPayload {
   timezone?: string;
 }
 
+/** Mendefinisikan kontrak data untuk interface CheckOutPayload. */
 export interface CheckOutPayload {
   image: File;
   latitude?: number;
@@ -22,6 +24,7 @@ export interface CheckOutPayload {
   timezone?: string;
 }
 
+/** Mendefinisikan kontrak data untuk interface ManualAttendancePayload. */
 export interface ManualAttendancePayload {
   employeeId: string;
   status: string;
@@ -36,6 +39,7 @@ export interface ManualAttendancePayload {
   forceBypassSubmission?: boolean;
 }
 
+/** Mendefinisikan kontrak data untuk interface CorrectAttendancePayload. */
 export interface CorrectAttendancePayload {
   checkIn?: string | null;
   checkOut?: string | null;

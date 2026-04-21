@@ -6,6 +6,7 @@ import { errorResponse } from "./response_helper";
 
 // & Map normalized error messages to HTTP status code and response body.
 // % Petakan pesan error ternormalisasi ke kode status HTTP dan body response.
+/** Mengekspor mapError untuk kebutuhan modul ini. */
 export const mapError = (error: any, set: any) => {
   // & Use message prefix convention from service layer exceptions.
   // % Gunakan konvensi prefix pesan dari exception di layer service.

@@ -1,15 +1,18 @@
 // * File ini menangani operasi tulis untuk module submissions.
 
-import { SubmissionService as LegacySubmissionService } from "../legacy";
+import { SubmissionService } from "../implementation";
 
 // & Create submission data.
 // % Buat data pengajuan.
-export const create = LegacySubmissionService.create;
+/** Mengekspor create untuk kebutuhan modul ini. */
+export const create = SubmissionService.create;
 
 // & Delete submission by id.
 // % Hapus pengajuan berdasarkan id.
-export const deleteById = LegacySubmissionService.deleteById;
+/** Mengekspor deleteById untuk kebutuhan modul ini. */
+export const deleteById = SubmissionService.deleteById;
 
 // & Update submission status.
 // % Update status pengajuan.
-export const updateStatus = LegacySubmissionService.updateStatus;
+/** Mengekspor updateStatus untuk kebutuhan modul ini. */
+export const updateStatus = SubmissionService.updateStatus;

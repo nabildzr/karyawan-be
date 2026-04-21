@@ -6,6 +6,10 @@ import { writeAuditLog as writeBaseAuditLog } from "./writeAudit";
 
 // & Persist RBAC-specific audit action by delegating to base writer.
 // % Simpan aksi audit khusus RBAC dengan mendelegasikan ke penulis dasar.
+/**
+ * Menjalankan tanggung jawab utama fungsi writeAuditLog.
+ * @param params Parameter yang digunakan dalam proses ini.
+ */
 export async function writeAuditLog(params: {
   actor: AuditActor;
   action: string;

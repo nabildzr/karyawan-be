@@ -57,6 +57,7 @@ const getShiftWindowByDayKey = (
   return { shiftStart, shiftEnd };
 };
 
+/** Mengekspor attendanceCronPlugin untuk kebutuhan modul ini. */
 export const attendanceCronPlugin = new Elysia().use(
   cron({
     name: "auto-alpha-generator",

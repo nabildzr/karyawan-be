@@ -24,6 +24,7 @@ const parseOptionalCoordinate = (value: unknown): number | undefined => {
   return Number.isFinite(numeric) ? numeric : undefined;
 };
 
+/** Mengekspor attendanceRoutes untuk kebutuhan modul ini. */
 export const attendanceRoutes = new Elysia({
   prefix: "/attendances",
   detail: { tags: ["Attendances"] },

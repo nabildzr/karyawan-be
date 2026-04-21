@@ -8,6 +8,7 @@ import {
 } from "./create";
 import { getRoleDetail, listResources, listRoles } from "./report";
 
+/** Mengekspor RbacService untuk kebutuhan modul ini. */
 export const RbacService = {
   // & List resources.
   // % Daftar resource.

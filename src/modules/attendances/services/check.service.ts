@@ -15,8 +15,8 @@ import { formatSubmissionTypeLabel } from "../../../shared/attendances/submissio
 import { formatClockByTimezone } from "../../../shared/attendances/timezone";
 import { AuditActor } from "../../../shared/audit/actor";
 import { writeAuditLog } from "../../../shared/audit/writeAudit";
-import { GeofenceService } from "../../geofences/legacy";
-import { NotificationService } from "../../notifications/service";
+import { GeofenceService } from "../../geofences/geofences.service";
+import { NotificationService } from "../../notifications/notifications.service";
 import { PointsService } from "../../points/service";
 import { CheckInPayload, CheckOutPayload } from "../model";
 import { findBlockingSubmission } from "./blocking-submission.service";
@@ -24,6 +24,7 @@ import { verifyFace } from "./face.service";
 
 // & Handle employee check-in with schedule, submission, geofence, and face validations.
 // % Menangani check-in karyawan dengan validasi jadwal, pengajuan, geofence, dan wajah.
+/** Mengekspor checkIn untuk kebutuhan modul ini. */
 export const checkIn = async (
   userId: string,
   payload: CheckInPayload,
@@ -282,6 +283,7 @@ export const checkIn = async (
 
 // & Handle employee check-out with unlock window, geofence, and face validations.
 // % Menangani check-out karyawan dengan validasi waktu unlock, geofence, dan wajah.
+/** Mengekspor checkOut untuk kebutuhan modul ini. */
 export const checkOut = async (
   userId: string,
   payload: CheckOutPayload,

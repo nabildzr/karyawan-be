@@ -9,24 +9,28 @@ import { TransactionType } from "../../generated/prisma/enums";
 // Query Models
 // ========================
 
+/** Mengekspor PaginationQueryModel untuk kebutuhan modul ini. */
 export const PaginationQueryModel = t.Object({
   page: t.Optional(t.Number({ minimum: 1, default: 1 })),
   limit: t.Optional(t.Number({ minimum: 1, maximum: 100, default: 20 })),
   skip: t.Optional(t.Number({ minimum: 0 })),
 });
 
+/** Mengekspor PointRulesQueryModel untuk kebutuhan modul ini. */
 export const PointRulesQueryModel = t.Object({
   page: t.Optional(t.Number({ minimum: 1, default: 1 })),
   limit: t.Optional(t.Number({ minimum: 1, maximum: 100, default: 20 })),
   targetRole: t.Optional(t.String()),
 });
 
+/** Mengekspor InventoryQueryModel untuk kebutuhan modul ini. */
 export const InventoryQueryModel = t.Object({
   page: t.Optional(t.Number({ minimum: 1, default: 1 })),
   limit: t.Optional(t.Number({ minimum: 1, maximum: 100, default: 20 })),
   status: t.Optional(t.Union([t.Literal("AVAILABLE"), t.Literal("USED"), t.Literal("EXPIRED") ])),
 });
 
+/** Mengekspor AdminLedgerQueryModel untuk kebutuhan modul ini. */
 export const AdminLedgerQueryModel = t.Object({
   page: t.Optional(t.Number({ minimum: 1, default: 1 })),
   limit: t.Optional(t.Number({ minimum: 1, maximum: 100, default: 20 })),
@@ -42,6 +46,7 @@ export const AdminLedgerQueryModel = t.Object({
 // Point Rules Models
 // ========================
 
+/** Mengekspor PointRuleModel untuk kebutuhan modul ini. */
 export const PointRuleModel = t.Object({
   id: t.String(),
   ruleName: t.String(),
@@ -56,6 +61,7 @@ export const PointRuleModel = t.Object({
   updatedAt: t.String(),
 });
 
+/** Mengekspor CreatePointRulePayload untuk kebutuhan modul ini. */
 export const CreatePointRulePayload = t.Object({
   ruleName: t.String(),
   targetRole: t.String(),
@@ -66,8 +72,10 @@ export const CreatePointRulePayload = t.Object({
   description: t.Optional(t.String()),
 });
 
+/** Mengekspor UpdatePointRulePayload untuk kebutuhan modul ini. */
 export const UpdatePointRulePayload = t.Partial(CreatePointRulePayload);
 
+/** Mengekspor UpdatePointRulePatchPayload untuk kebutuhan modul ini. */
 export const UpdatePointRulePatchPayload = t.Partial(
   t.Object({
     ruleName: t.String(),
@@ -85,6 +93,7 @@ export const UpdatePointRulePatchPayload = t.Partial(
 // Point Ledgers Models
 // ========================
 
+/** Mengekspor PointLedgerModel untuk kebutuhan modul ini. */
 export const PointLedgerModel = t.Object({
   id: t.String(),
   userId: t.String(),
@@ -100,6 +109,7 @@ export const PointLedgerModel = t.Object({
   updatedAt: t.String(),
 });
 
+/** Mengekspor CreateLedgerEntryPayload untuk kebutuhan modul ini. */
 export const CreateLedgerEntryPayload = t.Object({
   userId: t.String(),
   transactionType: t.Enum(TransactionType),
@@ -113,6 +123,7 @@ export const CreateLedgerEntryPayload = t.Object({
 // Flexibility Items Models
 // ========================
 
+/** Mengekspor FlexibilityItemModel untuk kebutuhan modul ini. */
 export const FlexibilityItemModel = t.Object({
   id: t.String(),
   itemName: t.String(),
@@ -135,6 +146,7 @@ export const FlexibilityItemModel = t.Object({
   updatedAt: t.String(),
 });
 
+/** Mengekspor CreateFlexibilityItemPayload untuk kebutuhan modul ini. */
 export const CreateFlexibilityItemPayload = t.Object({
   itemName: t.String(),
   pointCost: t.Number(),
@@ -156,6 +168,7 @@ export const CreateFlexibilityItemPayload = t.Object({
   isActive: t.Optional(t.Boolean()),
 });
 
+/** Mengekspor UpdateFlexibilityItemPayload untuk kebutuhan modul ini. */
 export const UpdateFlexibilityItemPayload = t.Partial(
   t.Object({
     itemName: t.String(),
@@ -181,6 +194,7 @@ export const UpdateFlexibilityItemPayload = t.Partial(
 // User Tokens Models
 // ========================
 
+/** Mengekspor UserTokenModel untuk kebutuhan modul ini. */
 export const UserTokenModel = t.Object({
   id: t.String(),
   userId: t.String(),
@@ -194,6 +208,7 @@ export const UserTokenModel = t.Object({
   updatedAt: t.String(),
 });
 
+/** Mengekspor UserTokenWithItemModel untuk kebutuhan modul ini. */
 export const UserTokenWithItemModel = t.Object({
   id: t.String(),
   userId: t.String(),
@@ -208,6 +223,7 @@ export const UserTokenWithItemModel = t.Object({
   updatedAt: t.String(),
 });
 
+/** Mengekspor BuyTokenPayload untuk kebutuhan modul ini. */
 export const BuyTokenPayload = t.Object({
   itemId: t.String(),
 });
@@ -216,6 +232,7 @@ export const BuyTokenPayload = t.Object({
 // User Wallet Models
 // ========================
 
+/** Mengekspor UserWalletModel untuk kebutuhan modul ini. */
 export const UserWalletModel = t.Object({
   userId: t.String(),
   balance: t.Number(),
@@ -230,11 +247,13 @@ export const UserWalletModel = t.Object({
   percentageToNextLevel: t.Number(),
 });
 
+/** Mengekspor PointEvaluationResult untuk kebutuhan modul ini. */
 export const PointEvaluationResult = t.Object({
   pointModifier: t.Number(),
   rulesApplied: t.Array(t.String()),
 });
 
+/** Mengekspor TokenApplicationResult untuk kebutuhan modul ini. */
 export const TokenApplicationResult = t.Object({
   tokenUsed: t.Optional(UserTokenModel),
   statusOverride: t.Optional(t.String()),
@@ -244,6 +263,7 @@ export const TokenApplicationResult = t.Object({
 // Leaderboard Models
 // ========================
 
+/** Mengekspor LeaderboardUserModel untuk kebutuhan modul ini. */
 export const LeaderboardUserModel = t.Object({
   rank: t.Number(),
   userId: t.String(),
@@ -258,4 +278,5 @@ export const LeaderboardUserModel = t.Object({
   totalEarned: t.Optional(t.Number()),
 });
 
+/** Mengekspor LeaderboardResponseModel untuk kebutuhan modul ini. */
 export const LeaderboardResponseModel = t.Array(LeaderboardUserModel);

@@ -2,6 +2,7 @@ import { t } from "elysia";
 import { ShiftsPlain } from "../../generated/prismabox/Shifts";
 
 // & ============ Reusable ============
+/** Mengekspor ShiftResponseDTO untuk kebutuhan modul ini. */
 export const ShiftResponseDTO = ShiftsPlain;
 
 const DayInputDTO = t.Object({
@@ -25,12 +26,14 @@ export const CreateScheduleDTO = t.Object({
   employeeIds: t.Optional(t.Array(t.String())),
   days: t.Array(DayInputDTO),
 });
+/** Mendefinisikan alias tipe untuk CreateSchedulePayload. */
 export type CreateSchedulePayload = typeof CreateScheduleDTO.static;
 
 /** PUT /working-schedules/:id/assign — ganti daftar karyawan */
 export const AssignEmployeesDTO = t.Object({
   employeeIds: t.Array(t.String()),
 });
+/** Mendefinisikan alias tipe untuk AssignEmployeesPayload. */
 export type AssignEmployeesPayload = typeof AssignEmployeesDTO.static;
 
 /** GET /working-schedules/mobile/summary — query range tanggal */

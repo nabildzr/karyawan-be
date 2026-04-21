@@ -5,6 +5,7 @@ import { successResponse } from "../../utils";
 import { mapError } from "../../utils/mapError";
 import { AssessmentsService } from "./service";
 
+/** Mengekspor assessmentsRoutes untuk kebutuhan modul ini. */
 export const assessmentsRoutes = new Elysia({
   prefix: "/assessments",
   detail: {

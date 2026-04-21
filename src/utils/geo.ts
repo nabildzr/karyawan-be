@@ -5,6 +5,7 @@
 // Konversi derajat ke radian
 const deg2rad = (deg: number): number => deg * (Math.PI / 180);
 
+/** Mengekspor calculateDistanceInMeters untuk kebutuhan modul ini. */
 export const calculateDistanceInMeters = (
   lat1: number,
   lon1: number,

@@ -5,6 +5,7 @@
 import type { UploadApiErrorResponse, UploadApiResponse } from "cloudinary";
 import { getCloudinaryClient, getSubmissionAttachmentFolder } from "../../config/cloudinary";
 
+/** Mengekspor ALLOWED_SUBMISSION_MIME_TYPES untuk kebutuhan modul ini. */
 export const ALLOWED_SUBMISSION_MIME_TYPES = [
   "application/pdf",
   "image/jpeg",
@@ -19,6 +20,7 @@ const ALLOWED_MIME_TO_EXTENSIONS: Record<string, string[]> = {
 
 const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
 
+/** Mendefinisikan alias tipe untuk SubmissionUploadedAttachment. */
 export type SubmissionUploadedAttachment = {
   url: string;
   publicId: string;
@@ -166,6 +168,12 @@ function uploadBufferToCloudinary(
   });
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi uploadSubmissionAttachment.
+ * @param file Parameter yang digunakan dalam proses ini.
+ * @param userId Parameter yang digunakan dalam proses ini.
+ * @returns Nilai hasil dari proses fungsi ini.
+ */
 export async function uploadSubmissionAttachment(
   file: File,
   userId: string,
@@ -189,6 +197,10 @@ export async function uploadSubmissionAttachment(
   }
 }
 
+/**
+ * Menjalankan tanggung jawab utama fungsi deleteSubmissionAttachment.
+ * @param publicId Parameter yang digunakan dalam proses ini.
+ */
 export async function deleteSubmissionAttachment(publicId: string) {
   const cloudinary = getCloudinaryClient();
 

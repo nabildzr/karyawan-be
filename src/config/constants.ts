@@ -2,6 +2,7 @@
 // & This file defines backend logic for constants.ts.
 // % File ini mendefinisikan logika backend untuk constants.ts.
 
+/** Mengekspor constants untuk kebutuhan modul ini. */
 export const constants = {
   // & Define server metadata constants for application identification and contact information.
   // % Mendefinisikan konstanta metadata server untuk identifikasi aplikasi dan informasi kontak.
@@ -33,6 +34,7 @@ export const constants = {
   },
 };
 
+/** Mengekspor RedisKeys untuk kebutuhan modul ini. */
 export const RedisKeys = {
   USER: (userId: string) => `user:${userId}`,
   USERS: "users",

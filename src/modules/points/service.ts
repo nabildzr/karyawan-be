@@ -3,9 +3,10 @@
 // % File ini mengagregasi repository, feature service, dan facade points publik.
 
 import prisma from "../../config/prisma";
+import { DEFAULT_TIMEZONE, JAKARTA_UTC_OFFSET } from "../../config/timezone";
+import type { PrismaClient } from "../../generated/prisma/client";
 import { TransactionType } from "../../generated/prisma/enums";
 import type { AuditActor } from "../../shared/audit/actor";
-import { createPointsRepository } from "./repository";
 import {
   createAnalyticsService,
   createLedgerService,
@@ -35,7 +36,9 @@ const toSignedPointLabel = (amount: number) =>
   `${amount >= 0 ? "+" : ""}${amount}`;
 
 const normalizeAttendanceStatus = (value: unknown) =>
-  String(value ?? "").trim().toUpperCase();
+  String(value ?? "")
+    .trim()
+    .toUpperCase();
 
 const parseLateMinutesSafely = (value: unknown): number | null => {
   const parsed = Number(value);
@@ -43,6 +46,304 @@ const parseLateMinutesSafely = (value: unknown): number | null => {
   if (parsed < 0) return 0;
   return Math.floor(parsed);
 };
+
+const getBusinessDayStart = (
+  date = new Date(),
+  timezone = DEFAULT_TIMEZONE,
+) => {
+  const dayKey = date.toLocaleDateString("sv-SE", { timeZone: timezone });
+  return new Date(`${dayKey}T00:00:00.000${JAKARTA_UTC_OFFSET}`);
+};
+
+// & Build helper object that encapsulates point-related DB queries.
+// % Bentuk helper object yang membungkus query database terkait poin.
+const createPointsRepository = (db: PrismaClient) => ({
+  rules: {
+    async create(data: any) {
+      return db.pointRules.create({ data });
+    },
+
+    async findById(id: string) {
+      return db.pointRules.findUnique({ where: { id } });
+    },
+
+    async findAll(options?: { skip?: number; take?: number; where?: any }) {
+      return db.pointRules.findMany({
+        skip: options?.skip,
+        take: options?.take,
+        where: { ...options?.where, isActive: true },
+        orderBy: { createdAt: "desc" },
+      });
+    },
+
+    async findByRole(targetRole: string) {
+      const normalizedRole = String(targetRole ?? "")
+        .trim()
+        .toUpperCase();
+
+      return db.pointRules.findMany({
+        where: {
+          isActive: true,
+          OR: [
+            { targetRole: normalizedRole },
+            { targetRole: "*" },
+            { targetRole: "ALL" },
+            { targetRole: "SEMUA" },
+          ],
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    },
+
+    async findAllActive(where?: any) {
+      return db.pointRules.findMany({
+        where: { ...where, isActive: true },
+        orderBy: { createdAt: "desc" },
+      });
+    },
+
+    async update(id: string, data: any) {
+      return db.pointRules.update({ where: { id }, data });
+    },
+
+    async delete(id: string) {
+      return db.pointRules.update({
+        where: { id },
+        data: { isActive: false },
+      });
+    },
+
+    async count(where?: any) {
+      return db.pointRules.count({ where: { ...where, isActive: true } });
+    },
+  },
+
+  ledgers: {
+    async create(data: any) {
+      return db.pointLedgers.create({ data });
+    },
+
+    async findAll(options?: { skip?: number; take?: number; where?: any }) {
+      return db.pointLedgers.findMany({
+        where: options?.where,
+        orderBy: { createdAt: "desc" },
+        skip: options?.skip,
+        take: options?.take,
+        include: {
+          user: {
+            select: {
+              id: true,
+              nip: true,
+              currentPoints: true,
+              rbacRole: {
+                select: {
+                  key: true,
+                },
+              },
+              employees: {
+                select: {
+                  id: true,
+                  fullName: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    },
+
+    async countAll(where?: any) {
+      return db.pointLedgers.count({ where });
+    },
+
+    async findByUserId(
+      userId: string,
+      options?: { skip?: number; take?: number },
+    ) {
+      return db.pointLedgers.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        skip: options?.skip,
+        take: options?.take,
+      });
+    },
+
+    async getLatestBalance(userId: string) {
+      const latest = await db.pointLedgers.findFirst({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        select: { balanceAfter: true },
+      });
+      return latest?.balanceAfter ?? 0;
+    },
+
+    async countUserTransactions(userId: string, startDate?: Date) {
+      return db.pointLedgers.count({
+        where: {
+          userId,
+          ...(startDate && { createdAt: { gte: startDate } }),
+        },
+      });
+    },
+
+    async findByReference(
+      userId: string,
+      referenceEntity: string,
+      referenceId: string,
+    ) {
+      return db.pointLedgers.findFirst({
+        where: {
+          userId,
+          referenceEntity,
+          referenceId,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    },
+  },
+
+  flexibilityItems: {
+    async create(data: any) {
+      return db.flexibilityItems.create({ data });
+    },
+
+    async findById(id: string) {
+      return db.flexibilityItems.findUnique({ where: { id } });
+    },
+
+    async findAll(options?: { skip?: number; take?: number; where?: any }) {
+      return db.flexibilityItems.findMany({
+        where: {
+          ...(options?.where ?? {}),
+          isActive: true,
+        },
+        orderBy: { createdAt: "desc" },
+        skip: options?.skip,
+        take: options?.take,
+      });
+    },
+
+    async count(where?: any) {
+      return db.flexibilityItems.count({
+        where: {
+          ...(where ?? {}),
+          isActive: true,
+        },
+      });
+    },
+
+    async update(id: string, data: any) {
+      return db.flexibilityItems.update({ where: { id }, data });
+    },
+
+    async delete(id: string) {
+      return db.flexibilityItems.update({
+        where: { id },
+        data: { isActive: false },
+      });
+    },
+  },
+
+  userTokens: {
+    async create(data: any) {
+      return db.userTokens.create({
+        data,
+        include: { item: true },
+      });
+    },
+
+    async findById(id: string) {
+      return db.userTokens.findUnique({
+        where: { id },
+        include: { item: true },
+      });
+    },
+
+    async findByUserId(
+      userId: string,
+      options?: { status?: string; skip?: number; take?: number },
+    ) {
+      return db.userTokens.findMany({
+        where: {
+          userId,
+          ...(options?.status && { status: options.status }),
+        },
+        include: {
+          item: true,
+          attendance: {
+            select: {
+              id: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip: options?.skip,
+        take: options?.take,
+      });
+    },
+
+    async findAvailable(userId: string) {
+      return db.userTokens.findMany({
+        where: {
+          userId,
+          status: "AVAILABLE",
+          expiresAt: { gte: getBusinessDayStart() },
+        },
+        include: { item: true },
+        orderBy: { createdAt: "asc" },
+      });
+    },
+
+    async update(id: string, data: any) {
+      return db.userTokens.update({
+        where: { id },
+        data,
+        include: { item: true },
+      });
+    },
+
+    async expireTokens(beforeDate: Date) {
+      return db.userTokens.updateMany({
+        where: {
+          status: "AVAILABLE",
+          expiresAt: { lt: beforeDate },
+        },
+        data: { status: "EXPIRED", remainingDays: 0 },
+      });
+    },
+
+    async countUserTokens(userId: string, status?: string) {
+      return db.userTokens.count({
+        where: {
+          userId,
+          ...(status && { status }),
+        },
+      });
+    },
+  },
+
+  users: {
+    async updatePoints(userId: string, currentPoints: number) {
+      return db.users.update({
+        where: { id: userId },
+        data: {
+          currentPoints,
+        },
+      });
+    },
+
+    async getPoints(userId: string) {
+      const user = await db.users.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          currentPoints: true,
+        },
+      });
+      return user;
+    },
+  },
+});
 
 const RULE_FIELD_CONFIGS: RuleFieldConfig[] = [
   {
@@ -314,6 +615,7 @@ const validateAndNormalizeRulePayload = (payload: any) => {
 
 // & Compose all points sub-services using one shared repository instance.
 // % Susun semua sub-service points memakai satu instance repository bersama.
+/** Mengekspor createPointsServices untuk kebutuhan modul ini. */
 export const createPointsServices = (db: any) => {
   const repository = createPointsRepository(db);
 
@@ -328,6 +630,7 @@ export const createPointsServices = (db: any) => {
   };
 };
 
+/** Mengekspor createPointsService untuk kebutuhan modul ini. */
 export const createPointsService = (db: any) => {
   const services = createPointsServices(db);
 
@@ -816,5 +1119,6 @@ export const createPointsService = (db: any) => {
   };
 };
 
+/** Mengekspor PointsService untuk kebutuhan modul ini. */
 export const PointsService = createPointsService(prisma);
 

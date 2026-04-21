@@ -17,6 +17,8 @@
 
 # docs
 .docs/
+docs/*
+docs
 
 # misc
 .DS_Store
@@ -51,8 +53,7 @@ package-lock.json
 server_pid
 server2.log
 server3.log
-docs/*
-docs
+
 
 # & Prisma Generated
 /src/generated/prisma

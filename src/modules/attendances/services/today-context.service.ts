@@ -18,6 +18,7 @@ import { findBlockingSubmission } from "./blocking-submission.service";
 
 // & Build today's attendance context including shift state and action lock reasons.
 // % Susun konteks absensi hari ini termasuk status shift dan alasan penguncian aksi.
+/** Mengekspor getTodayContext untuk kebutuhan modul ini. */
 export const getTodayContext = async (
   userId: string,
   timezone = DEFAULT_TIMEZONE,

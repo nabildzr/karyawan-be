@@ -33,6 +33,7 @@ function createPrismaClient() {
 
 // & Reuse global client when available to avoid reconnect storms.
 // % Gunakan ulang client global jika tersedia untuk menghindari reconnect berulang.
+/** Mengekspor db untuk kebutuhan modul ini. */
 export const db = globalForPrisma.prisma ?? createPrismaClient();
 
 // & Cache Prisma instance globally in non-production runtime only.
@@ -43,6 +44,7 @@ if (process.env.NODE_ENV !== "production") {
 
 // & Shared options for generic Prisma search helper.
 // % Opsi bersama untuk helper pencarian generik Prisma.
+/** Mendefinisikan kontrak data untuk interface SearchOptions. */
 export interface SearchOptions {
   page?: number;
   limit?: number;
@@ -53,6 +55,7 @@ export interface SearchOptions {
 
 // & Execute paginated search against a Prisma model using dynamic filters.
 // % Jalankan pencarian paginasi pada model Prisma dengan filter dinamis.
+/** Mengekspor prismaSearch untuk kebutuhan modul ini. */
 export const prismaSearch = async <T extends keyof PrismaClient>(
   model: T,
   options: SearchOptions

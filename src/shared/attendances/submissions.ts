@@ -5,27 +5,30 @@ import prisma from "../../config/prisma";
 
 // & Default statuses/types considered as blockers in attendance flow.
 // % Status/tipe default yang dianggap memblokir dalam flow absensi.
+/** Mengekspor BLOCKING_SUBMISSION_STATUSES untuk kebutuhan modul ini. */
 export const BLOCKING_SUBMISSION_STATUSES = ["PENDING"] as const;
+/** Mengekspor BLOCKING_SUBMISSION_TYPES untuk kebutuhan modul ini. */
 export const BLOCKING_SUBMISSION_TYPES = [
   "IZIN_SAKIT",
   "IZIN_KHUSUS",
   "DINAS_LUAR",
   "LEMBUR",
-  "GANTI_SHIFT_HARI",
 ] as const;
 
+/** Mendefinisikan alias tipe untuk BlockingSubmissionStatus. */
 export type BlockingSubmissionStatus =
   | "PENDING"
   | "APPROVED"
   | "REJECTED";
 
+/** Mendefinisikan alias tipe untuk BlockingSubmissionType. */
 export type BlockingSubmissionType =
   | "IZIN_SAKIT"
   | "IZIN_KHUSUS"
   | "DINAS_LUAR"
   | "LEMBUR"
-  | "GANTI_SHIFT_HARI";
 
+/** Mendefinisikan alias tipe untuk BlockingSubmissionOptions. */
 export type BlockingSubmissionOptions = {
   statuses?: BlockingSubmissionStatus[];
   types?: BlockingSubmissionType[];
@@ -33,17 +36,18 @@ export type BlockingSubmissionOptions = {
 
 // & Convert submission type enum into readable Indonesian label.
 // % Konversi enum tipe pengajuan menjadi label Indonesia yang mudah dibaca.
+/** Mengekspor formatSubmissionTypeLabel untuk kebutuhan modul ini. */
 export const formatSubmissionTypeLabel = (type: string) => {
   if (type === "IZIN_SAKIT") return "izin sakit";
   if (type === "IZIN_KHUSUS") return "izin khusus";
   if (type === "DINAS_LUAR") return "dinas luar";
   if (type === "LEMBUR") return "lembur";
-  if (type === "GANTI_SHIFT_HARI") return "ganti shift hari";
   return type.toLowerCase();
 };
 
 // & Compose localized reason text for submission-based attendance blocking.
 // % Susun teks alasan terlokalisasi untuk blokir absensi berbasis pengajuan.
+/** Mengekspor resolveSubmissionBlockingReason untuk kebutuhan modul ini. */
 export const resolveSubmissionBlockingReason = (submission: {
   type: string;
   status: string;
@@ -53,6 +57,7 @@ export const resolveSubmissionBlockingReason = (submission: {
 
 // & Find most recent blocking submission for a single user in date range.
 // % Cari pengajuan pemblokir terbaru untuk satu user pada rentang tanggal.
+/** Mengekspor findBlockingSubmissionByRange untuk kebutuhan modul ini. */
 export const findBlockingSubmissionByRange = async (
   userId: string,
   rangeStart: Date,
@@ -76,6 +81,7 @@ export const findBlockingSubmissionByRange = async (
 
 // & Build userId -> blocking submission map for bulk attendance checks.
 // % Bangun map userId -> pengajuan pemblokir untuk pengecekan absensi massal.
+/** Mengekspor findBlockingSubmissionMapByUserIds untuk kebutuhan modul ini. */
 export const findBlockingSubmissionMapByUserIds = async (
   userIds: string[],
   rangeStart: Date,

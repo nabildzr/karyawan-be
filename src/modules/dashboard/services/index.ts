@@ -1,0 +1,2 @@
+export { getAdminDashboard } from "./report";
+

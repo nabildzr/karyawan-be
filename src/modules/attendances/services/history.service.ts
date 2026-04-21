@@ -11,6 +11,7 @@ import {
 
 // & Calculate effective working days excluding weekends and public holidays.
 // % Hitung hari kerja efektif dengan mengecualikan akhir pekan dan hari libur nasional.
+/** Mengekspor calculateWorkingDays untuk kebutuhan modul ini. */
 export const calculateWorkingDays = (
   startDate: Date,
   endDate: Date,
@@ -36,6 +37,7 @@ export const calculateWorkingDays = (
 
 // & Calculate current attendance streak from ordered attendance statuses.
 // % Hitung streak kehadiran saat ini dari urutan status absensi.
+/** Mengekspor calculateStreak untuk kebutuhan modul ini. */
 export const calculateStreak = (
   attendances: { createdAt: Date; status: string }[],
 ): number => {
@@ -59,6 +61,7 @@ export const calculateStreak = (
 
 // & Get paginated attendance history and summary metrics for one employee.
 // % Ambil riwayat absensi terpaginasikan beserta metrik ringkasan untuk satu karyawan.
+/** Mengekspor getHistory untuk kebutuhan modul ini. */
 export const getHistory = async (
   userId: string,
   options: {
@@ -207,6 +210,7 @@ export const getHistory = async (
 
 // & Get one attendance detail that belongs to the authenticated employee.
 // % Ambil detail satu absensi yang memang milik karyawan terautentikasi.
+/** Mengekspor getHistoryById untuk kebutuhan modul ini. */
 export const getHistoryById = async (userId: string, attendanceId: string) => {
   const employee = await prisma.employees.findFirst({
     where: { userId },
