@@ -5,7 +5,7 @@
 import { cron } from "@elysiajs/cron";
 import { Elysia } from "elysia";
 import prisma from "../../config/prisma";
-import { PointsService } from "../../modules/points/service";
+import { PointsService } from "../../modules/points/points.service";
 import { writeAuditLog } from "../../shared/audit/writeAudit";
 
 const SYSTEM_ACTOR = {

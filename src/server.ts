@@ -6,8 +6,8 @@ import { Elysia } from "elysia";
 import { constants } from "./config/constants";
 import { authPlugin } from "./middleware/auth";
 import { assessmentCategoriesRoutes } from "./modules/assessmentCategories/assessmentCategories.route";
-import { assessmentsRoutes } from "./modules/assessments";
-import { attendanceRoutes } from "./modules/attendances";
+import { assessmentsRoutes } from "./modules/assessments/assessments.route";
+import { attendanceRoutes } from "./modules/attendances/attendances.route";
 import { auditLogRoutes } from "./modules/auditLogs/auditLogs.route";
 import { authRoutes } from "./modules/auth/auth.route";
 import { contohmoduleRoutes } from "./modules/contohmodule/contohmodule.route";
@@ -18,12 +18,12 @@ import { faceRoutes } from "./modules/faces/faces.route";
 import { geofenceRoutes } from "./modules/geofences/geofences.route";
 import { holidayRoutes } from "./modules/holidays/holidays.route";
 import { notificationRoutes } from "./modules/notifications/notifications.route";
-import { pointsRoutes } from "./modules/points";
+import { pointsRoutes } from "./modules/points/points.route";
 import { positionRoutes } from "./modules/positions/positions.route";
-import { rbacRoutes } from "./modules/rbac";
+import { rbacRoutes } from "./modules/rbac/rbac.route";
 import { RootHandler } from "./modules/root/root.route";
-import { submissionRoutes } from "./modules/submissions";
-import { workingScheduleRoutes } from "./modules/workingSchedules";
+import { submissionRoutes } from "./modules/submissions/submissions.route";
+import { workingScheduleRoutes } from "./modules/workingSchedules/workingSchedules.route";
 
 // & Create versioned API server instance using configured API version.
 // % Buat instance server API bertag versi menggunakan versi API pada konfigurasi.

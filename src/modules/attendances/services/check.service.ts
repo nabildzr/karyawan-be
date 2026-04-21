@@ -17,8 +17,8 @@ import { AuditActor } from "../../../shared/audit/actor";
 import { writeAuditLog } from "../../../shared/audit/writeAudit";
 import { GeofenceService } from "../../geofences/geofences.service";
 import { NotificationService } from "../../notifications/notifications.service";
-import { PointsService } from "../../points/service";
-import { CheckInPayload, CheckOutPayload } from "../model";
+import { PointsService } from "../../points/points.service";
+import { CheckInPayload, CheckOutPayload } from "../attendances.schema";
 import { findBlockingSubmission } from "./blocking-submission.service";
 import { verifyFace } from "./face.service";
 

@@ -12,7 +12,7 @@ import {
 import { resolveSubmissionBlockingReason } from "../../../shared/attendances/submissions";
 import { writeAuditLog } from "../../../shared/audit/writeAudit";
 import { toDateKey } from "../../../utils/holidayshelper";
-import { PointsService } from "../../points/service";
+import { PointsService } from "../../points/points.service";
 import { CorrectAttendancePayload, ManualAttendancePayload } from "../model";
 import { findBlockingSubmission } from "./blocking-submission.service";
 
