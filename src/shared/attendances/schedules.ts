@@ -124,25 +124,36 @@ export const findFirstInvalidScheduleDateInRange = <
 ): ScheduleRangeValidationIssue | null => {
   // & Use noon anchor to avoid DST-related date shifting while iterating.
   // % Gunakan anchor jam 12 siang untuk menghindari pergeseran tanggal akibat DST.
+
+  // ? awal
   const cursor = new Date(startDate);
   cursor.setHours(12, 0, 0, 0);
 
+  // ? akhir 
   const rangeEnd = new Date(endDate);
   rangeEnd.setHours(12, 0, 0, 0);
 
+  // ? jika awal dan akhir sama-sama 2024-12-01, maka cursor akan tetap di 2024-12-01 selama iterasi
+  // ? sehingga tidak akan terpengaruh jika misalnya ada perubahan jam akibat DST di tengah bulan tersebut. 
+  // ? coba dulu cari masalah pada setiap tanggal, jika ketemu langsung return issue-nya, kalau sampai habis berarti aman
+  /* ? proses `while` loop ini memeriksa rentang tanggal dari `cursor` hingga `rangeEnd` dan memeriksa setiap
+  tanggal untuk mendeteksi masalah validasi hari jadwal. Berikut ini rincian dari apa yang dilakukannya: */
   while (cursor <= rangeEnd) {
     const scheduleDay = findScheduleDayByDate(days, cursor, timezone);
     const dateKey = toDateKeyByTimezone(cursor, timezone);
     const dayName = getDayNameID(cursor, timezone);
 
+    // ? Jika tidak ada hari jadwal yang cocok untuk tanggal ini, buat issue dengan alasan "NO_SCHEDULE_DAY".
     if (!scheduleDay) {
       return { dateKey, dayName, reason: "NO_SCHEDULE_DAY" };
     }
 
+    // ? Jika hari jadwal ditemukan tetapi tidak aktif, buat issue dengan alasan "INACTIVE_SCHEDULE_DAY".
     if (!scheduleDay.isActive) {
       return { dateKey, dayName, reason: "INACTIVE_SCHEDULE_DAY" };
     }
 
+    // ? Jika hari jadwal aktif tetapi tidak memiliki data shift, buat issue dengan alasan "MISSING_SHIFT".
     if (!scheduleDay.shift) {
       return { dateKey, dayName, reason: "MISSING_SHIFT" };
     }

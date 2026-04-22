@@ -500,4 +500,69 @@ export const SubmissionService = {
 
     return updatedSubmission;
   },
+
+  // & Tarik kembali pengajuan oleh karyawan yang mengajukan
+  async retract(id: string, userId: string) {
+    const existing = await prisma.submissions.findUnique({ where: { id } });
+    
+    // ^ validasi data pengajuan
+    if (!existing) {
+      throw new Error("Not Found: Data pengajuan tidak ditemukan.");
+    }
+
+    // ^ Hanya bisa menarik kembali pengajuan milik sendiri
+    if (existing.userId !== userId) {
+      throw new Error(
+        "Forbidden: Anda hanya dapat menarik kembali pengajuan milik sendiri.",
+      );
+    }
+
+    // ^ Hanya pengajuan dengan status PENDING yang bisa ditarik kembali
+    if (existing.status !== "PENDING") {
+      throw new Error(
+        "Conflict: Hanya pengajuan dengan status PENDING yang dapat ditarik kembali.",
+      );
+    }
+
+    // ? hapus saja data pengajuan, karena belum diproses sama sekali
+    const deleted = await prisma.submissions.delete({ where: { id } });
+
+    // ? hapus attachment jika ada
+    if (existing.attachmentPublicId) {
+      try {
+        await deleteSubmissionAttachment(existing.attachmentPublicId);
+      }
+      catch (error) {
+        console.error("Cloudinary cleanup failed on submission retract:", error);
+        // ? tidak menggagalkan proses tarik kembali meskipun terjadi error saat hapus lampiran, karena data pengajuan sudah dihapus dari database
+      }
+    }
+    
+    try {
+      await writeAuditLog({
+        actor: {
+          id: userId,
+          role: "EMPLOYEE",
+        },
+        action: "RETRACT_SUBMISSION",
+        entity: "Submissions",
+        entityId: id,
+        changes: {
+          before: {
+            status: existing.status,
+            type: existing.type,
+            startDate: existing.startDate,
+            endDate: existing.endDate,
+          },
+          after: null,
+        },
+        reason: "Pengajuan ditarik kembali oleh karyawan sebelum diproses.",
+      });
+    }
+    catch (auditError) {
+      console.error("Failed to write RETRACT_SUBMISSION audit log:", auditError);
+    }
+    
+    return deleted;
+  }
 };

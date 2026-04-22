@@ -6,8 +6,8 @@ import { cron } from "@elysiajs/cron";
 import { Elysia } from "elysia";
 import prisma from "../../config/prisma";
 import { findBlockingSubmissionByUserIds } from "../../modules/attendances/services/blocking-submission.service";
-import { PointsService } from "../../modules/points/service";
 import { checkIsHoliday } from "../../utils/holidayshelper";
+import { PointsService } from "../../modules/points/points.service";
 
 const DEFAULT_TIMEZONE = "Asia/Jakarta";
 const JAKARTA_UTC_OFFSET = "+07:00";
