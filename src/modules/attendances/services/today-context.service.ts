@@ -1,24 +1,21 @@
 // * File ini menangani penyusunan konteks absensi hari ini.
-// & Builds today attendance context payload for employee-facing flows.
-// % Menyusun payload konteks absensi hari ini untuk alur sisi karyawan.
+// Menyusun payload konteks absensi hari ini untuk alur sisi karyawan.
 
 import prisma from "../../../config/prisma";
 import { DEFAULT_TIMEZONE } from "../../../config/timezone";
 import {
-    findScheduleDayForToday,
-    getDayNameID,
-    getDayRangeByTimezone,
-    getShiftWindow,
-    hasActiveShiftOnDay,
+  findScheduleDayForToday,
+  getDayNameID,
+  getDayRangeByTimezone,
+  getShiftWindow,
+  hasActiveShiftOnDay,
 } from "../../../shared/attendances/schedules";
 import { formatSubmissionTypeLabel } from "../../../shared/attendances/submissions";
 import { formatClockByTimezone } from "../../../shared/attendances/timezone";
 import { dateKeyToUtcDate } from "../../../utils/holidayshelper";
 import { findBlockingSubmission } from "./blocking-submission.service";
 
-// & Build today's attendance context including shift state and action lock reasons.
-// % Susun konteks absensi hari ini termasuk status shift dan alasan penguncian aksi.
-/** Mengekspor getTodayContext untuk kebutuhan modul ini. */
+// Susun konteks absensi hari ini termasuk status shift dan alasan penguncian aksi.
 export const getTodayContext = async (
   userId: string,
   timezone = DEFAULT_TIMEZONE,
@@ -61,7 +58,9 @@ export const getTodayContext = async (
       },
       orderBy: { createdAt: "desc" },
     }),
-    findBlockingSubmission(userId, dayStart, dayEnd),
+    findBlockingSubmission(userId, dayStart, dayEnd, {
+      statuses: ["PENDING", "APPROVED"],
+    }),
     prisma.publicHolidays.findUnique({
       where: {
         date: dateKeyToUtcDate(dayKey),

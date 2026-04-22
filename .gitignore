@@ -54,6 +54,11 @@ server_pid
 server2.log
 server3.log
 
+latex/*
+latex
+html/*
+html
+docs/*
 
 # & Prisma Generated
 /src/generated/prisma

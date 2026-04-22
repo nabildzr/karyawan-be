@@ -6,8 +6,8 @@ import { cron } from "@elysiajs/cron";
 import { Elysia } from "elysia";
 import prisma from "../../config/prisma";
 import { findBlockingSubmissionByUserIds } from "../../modules/attendances/services/blocking-submission.service";
-import { checkIsHoliday } from "../../utils/holidayshelper";
 import { PointsService } from "../../modules/points/points.service";
+import { checkIsHoliday } from "../../utils/holidayshelper";
 
 const DEFAULT_TIMEZONE = "Asia/Jakarta";
 const JAKARTA_UTC_OFFSET = "+07:00";
@@ -62,7 +62,7 @@ export const attendanceCronPlugin = new Elysia().use(
   cron({
     name: "auto-alpha-generator",
     // Pattern: Detik Menit Jam Tanggal Bulan Hari (Jalan tiap 23:59:00)
-    pattern: "0 44 13 * * *",
+    pattern: "0 35 23 * * *",
     async run() {
       console.log("[CRON] 🤖 Memulai pengecekan Alpha harian...");
 
@@ -94,7 +94,7 @@ export const attendanceCronPlugin = new Elysia().use(
             isActive: true, // Hari ini masuk
           },
           include: {
-            // 🔥 FIX 2: Bawa data shift biar gak crash pas displit jamnya
+            // Bawa data shift biar gak crash pas displit jamnya
             shift: true,
             workingSchedule: {
               include: {
@@ -155,7 +155,6 @@ export const attendanceCronPlugin = new Elysia().use(
 
         // 2. Kumpulkan ID Karyawan yang diwajibkan masuk hari ini
         // Kita pakai Map buat filter duplikat (kalau misal 1 orang masuk di 2 jadwal)
-        // 2. Kumpulkan ID Karyawan yang diwajibkan masuk hari ini
         const expectedEmployees = new Map<string, any>();
         for (const scheduleDay of endedSchedules) {
           // emp = karyawan yang harusnya masuk hari ini berdasarkan jadwal kerja
@@ -186,13 +185,33 @@ export const attendanceCronPlugin = new Elysia().use(
           .map((item) => item?.emp?.userId)
           .filter(Boolean);
 
+        // cari user yang ada pengajuannya nya
         const blockingSubmissionMap = await findBlockingSubmissionByUserIds(
           employeeUserIds,
           dayStart,
           dayEnd,
+          {
+            statuses: [
+              // "PENDING", // klo ga mau pending ikut (hapus aja)
+              "APPROVED",
+            ],
+          },
         );
 
-        // 4. Komparasi: Siapa yang harusnya masuk tapi nggak ada di data absen?
+        // cari user yang ada pengajuan pending
+        const blockingPendingSubmissionMap =
+          await findBlockingSubmissionByUserIds(
+            employeeUserIds,
+            dayStart,
+            dayEnd,
+            {
+              statuses: [
+                // "PENDING", // klo ga mau pending ikut (hapus aja)
+                "PENDING",
+              ],
+            },
+          );
+
         // 4. Komparasi: Siapa yang harusnya masuk tapi nggak ada di data absen?
         const alphaRecords: any[] = [];
         for (const empId of expectedEmployees.keys()) {
@@ -220,6 +239,27 @@ export const attendanceCronPlugin = new Elysia().use(
               continue;
             }
 
+            // REJECT pending submission yang masih menggantung sampai lewat jam 12 malam, biar gak numpuk besoknya dan otomatis diproses hari ini
+            const blockingPendingSubmission = emp.userId
+              ? blockingPendingSubmissionMap.get(emp.userId)
+              : null;
+
+            if (blockingPendingSubmission) {
+              await prisma.submissions.update({
+                where: { id: blockingPendingSubmission.id },
+                data: {
+                  status: "REJECTED",
+                  rejectionReason:
+                    `Otomatis diproses oleh sistem karena melewati jam ${new Date().toLocaleTimeString()} malam, status PENDING menjadi REJECTED`,
+                },
+              });
+
+              console.log(
+                `[CRON] 🟧 Mengubah status pengajuan PENDING menjadi REJECTED untuk employee ${empId} karena melewati jam 12 malam.`,
+              );
+              continue;
+            }
+
             const baseShiftDate = new Date(
               `${dayKey}T00:00:00.000${JAKARTA_UTC_OFFSET}`,
             );
@@ -241,18 +281,17 @@ export const attendanceCronPlugin = new Elysia().use(
               expectedCheckOut.setDate(expectedCheckOut.getDate() + 1);
             }
 
-            // Push dengan field lengkap sesuai schema lu
+            // Push dengan field lengkap sesuai schema yg ada
             alphaRecords.push({
               employeeId: empId,
               userId: emp.userId,
               userRole: emp.user?.rbacRole?.key || "USER",
-              // date: new Date(), <--- KOLOM INI NGGAK ADA DI SCH\EMA LU (Jadi gue hapus)
               status: "ABSENT",
 
               // 🔥 TAMBAHAN SNAPSHOT WAJIB SESUAI ERROR TYPESCRIPT 🔥
               shiftNameSnapshot: scheduleDay.shift.name,
-              expectedCheckInSnapshot: expectedCheckIn,
-              expectedCheckOutSnapshot: expectedCheckOut,
+              expectedCheckInSnapshot: expectedCheckIn, // jam seharusnya
+              expectedCheckOutSnapshot: expectedCheckOut, // jam seharusnya
 
               // Kolom checkIn & checkOut real dibiarin null karena emang dia bolos
             });
@@ -286,6 +325,7 @@ export const attendanceCronPlugin = new Elysia().use(
             });
           }
 
+          // apply rule attendance nya (kalau ada) maka apply ke semua karyawan yang berkait (alpha)
           for (const item of createdAttendances) {
             await PointsService.applyAttendanceRules({
               userId: item.userId,

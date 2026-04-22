@@ -4,7 +4,6 @@ export const SubmissionTypeEnum = t.Union([
   t.Literal("IZIN_SAKIT"),
   t.Literal("IZIN_KHUSUS"),
   t.Literal("DINAS_LUAR"),
-  t.Literal("LEMBUR"),
 ]);
 
 export const SubmissionStatusEnum = t.Union([
@@ -21,7 +20,7 @@ export const SubmissionCreateDTO = t.Object({
   attachmentFile: t.Optional(
     t.File({
       type: ["application/pdf", "image/jpeg", "image/png"],
-      maxSize: 10 * 1024 * 1024,
+      maxSize: 10 * 1024 * 1024, // 10mb 
     }),
   ),
 });

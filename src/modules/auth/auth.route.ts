@@ -7,11 +7,11 @@ import { authPlugin, checkAuth, signJWT } from "../../middleware/auth";
 import { mapError } from "../../utils/mapError";
 import { successResponse } from "../../utils/response_helper";
 import {
-    AuthIdentifierBodyDTO,
-    AuthLoginBodyDTO,
-    AuthMeQueryDTO,
-    AuthResetPasswordBodyDTO,
-    AuthVerifyCodeBodyDTO,
+  AuthIdentifierBodyDTO,
+  AuthLoginBodyDTO,
+  AuthMeQueryDTO,
+  AuthResetPasswordBodyDTO,
+  AuthVerifyCodeBodyDTO,
 } from "./auth.schema";
 import { AuthService } from "./auth.service";
 
@@ -179,6 +179,7 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
   )
   .post("/logout", async ({ cookie, set }) => {
     cookie.authToken?.remove();
+    cookie.auth_session?.remove();
 
     set.status = HttpStatusEnum.HTTP_200_OK;
     return successResponse({

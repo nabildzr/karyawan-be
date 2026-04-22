@@ -13,6 +13,7 @@ export const mapError = (error: any, set: any) => {
   const msg: string = error.message ?? "";
   if (msg.startsWith("Bad Request"))
     set.status = HttpStatusEnum.HTTP_400_BAD_REQUEST;
+  // TODO: mending 200 untuk data yang memang kosong, daripada 404 yang bisa bikin bingung client
   else if (msg.startsWith("Not Found"))
     set.status = HttpStatusEnum.HTTP_404_NOT_FOUND;
   else if (msg.startsWith("Conflict"))

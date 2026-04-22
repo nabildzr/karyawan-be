@@ -22,9 +22,7 @@ import { CheckInPayload, CheckOutPayload } from "../attendances.schema";
 import { findBlockingSubmission } from "./blocking-submission.service";
 import { verifyFace } from "./face.service";
 
-// & Handle employee check-in with schedule, submission, geofence, and face validations.
-// % Menangani check-in karyawan dengan validasi jadwal, pengajuan, geofence, dan wajah.
-/** Mengekspor checkIn untuk kebutuhan modul ini. */
+// Menangani check-in karyawan dengan validasi jadwal, pengajuan, geofence, dan wajah.
 export const checkIn = async (
   userId: string,
   payload: CheckInPayload,
@@ -94,6 +92,7 @@ export const checkIn = async (
     userId,
     dayStart,
     dayEnd,
+    { statuses: ["PENDING", "APPROVED"] },
   );
 
   if (activeSubmission) {
@@ -281,9 +280,7 @@ export const checkIn = async (
   };
 };
 
-// & Handle employee check-out with unlock window, geofence, and face validations.
-// % Menangani check-out karyawan dengan validasi waktu unlock, geofence, dan wajah.
-/** Mengekspor checkOut untuk kebutuhan modul ini. */
+// Menangani check-out karyawan dengan validasi waktu unlock, geofence, dan wajah.
 export const checkOut = async (
   userId: string,
   payload: CheckOutPayload,

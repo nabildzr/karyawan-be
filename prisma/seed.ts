@@ -63,8 +63,8 @@ const NON_WORKING_DAYS = new Set<string>(["Saturday", "Sunday"]);
 
 // & Default and helper for configurable employee seed volume.
 // % Default dan helper untuk jumlah data karyawan seed yang bisa dikonfigurasi.
-const DEFAULT_TOTAL_EMPLOYEE_SEED = 1000;
-const FIXED_MANAGER_SEED_COUNT = 10;
+const DEFAULT_TOTAL_EMPLOYEE_SEED = 20;
+const FIXED_MANAGER_SEED_COUNT = 3;
 
 const parsePositiveInteger = (value: string | undefined, fallback: number) => {
   const parsed = Number(value);
@@ -549,8 +549,8 @@ async function resetDatabaseForSeed() {
 
   await prisma.userFaces.deleteMany();
   // Model ini opsional tergantung versi schema prisma yang ter-generate.
-  await (prisma as any).userBadges?.deleteMany?.();
-  await (prisma as any).points?.deleteMany?.();
+  // await (prisma as any).userBadges?.deleteMany?.(); deleted
+  // await (prisma as any).points?.deleteMany?.(); deleted
 
   await prisma.employeeDetails.deleteMany();
   await prisma.employees.deleteMany();

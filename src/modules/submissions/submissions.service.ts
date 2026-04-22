@@ -1,7 +1,11 @@
 // * File ini berisi implementasi service module submissions.
 
-import { DEFAULT_TIMEZONE } from "../../config/timezone";
-import { findFirstInvalidScheduleDateInRange } from "../../shared/attendances/schedules";
+import { DEFAULT_TIMEZONE, JAKARTA_UTC_OFFSET } from "../../config/timezone";
+import {
+  findFirstInvalidScheduleDateInRange,
+  findScheduleDayByDate,
+  hasActiveShiftOnDay,
+} from "../../shared/attendances/schedules";
 import type { AuditActor } from "../../shared/audit/actor";
 import { writeAuditLog } from "../../shared/audit/writeAudit";
 import {
@@ -21,11 +25,185 @@ import {
   toScheduleConflictMessage,
   toStartOfDay,
 } from "./utils";
+import { AttendanceStatus } from "../../generated/prisma/enums";
 
 const prisma = SubmissionsRepository.db;
 
+type ApprovedAttendanceSyncEntry = {
+  dateKey: string;
+  attendanceId: string;
+  action: "created" | "updated" | "skipped";
+};
+
+function toJakartaDateKey(date: Date) {
+  return date.toLocaleDateString("sv-SE", { timeZone: DEFAULT_TIMEZONE });
+}
+
+function buildAttendanceWindow(
+  dateKey: string,
+  shift: {
+    name: string;
+    startTime: string;
+    endTime: string;
+    isCrossDay: boolean;
+  },
+) {
+  const shiftNameSnapshot = shift.name;
+  const expectedCheckInSnapshot = new Date(
+    `${dateKey}T${shift.startTime}:00.000${JAKARTA_UTC_OFFSET}`,
+  );
+  const expectedCheckOutSnapshot = new Date(
+    `${dateKey}T${shift.endTime}:00.000${JAKARTA_UTC_OFFSET}`,
+  );
+
+  if (shift.isCrossDay) {
+    expectedCheckOutSnapshot.setDate(expectedCheckOutSnapshot.getDate() + 1);
+  }
+
+  return {
+    shiftNameSnapshot,
+    expectedCheckInSnapshot,
+    expectedCheckOutSnapshot,
+  };
+}
+
+/**
+ * Sinkronasi data kehadiran manual, jadi data absensi nya ada di database, ga perlu daily cron job..
+ * @param tx  instance transaksi Prisma yang sedang berjalan, digunakan untuk memastikan operasi database dilakukan dalam satu transaksi yang sama dengan pembaruan status pengajuan
+ * @param employee  objek yang berisi informasi tentang employee yang pengajuannya disetujui, termasuk working schedule-nya yang diperlukan untuk menentukan hari kerja dalam rentang tanggal pengajuan
+ * @param submission objek yang berisi informasi tentang pengajuan yang disetujui, termasuk tipe, rentang tanggal, dan alasan pengajuan yang diperlukan untuk menentukan hari kerja yang perlu disinkronisasi dan alasan manual yang sesuai pada data kehadiran
+ * @param actor objek yang berisi informasi tentang pengguna yang melakukan pembaruan status pengajuan, digunakan untuk mencatat informasi pelaku pada data kehadiran manual yang disinkronisasi
+ * @returns array yang berisi entri hasil sinkronisasi kehadiran manual untuk setiap hari kerja yang termasuk dalam rentang tanggal pengajuan, dengan informasi tanggal, ID data kehadiran yang dibuat atau diperbarui, dan aksi yang dilakukan (created, updated, atau skipped)
+ */
+async function syncApprovedSubmissionAttendances(
+  tx: any,
+  employee: {
+    id: string;
+    workingSchedules?: {
+      days?: Array<{
+        dayOfWeek: string;
+        isActive?: boolean | null;
+        shift?: {
+          name: string;
+          startTime: string;
+          endTime: string;
+          isCrossDay: boolean;
+        } | null;
+      }> | null;
+    } | null;
+  },
+  submission: {
+    type: string;
+    startDate: Date;
+    endDate: Date;
+    reason: string;
+  },
+  actor: { id: string; role: string },
+): Promise<ApprovedAttendanceSyncEntry[]> {
+  // Inisialisasi array, penyimpanan dari hasil sinkronisasi data kehadiran 
+  const attendanceSync: ApprovedAttendanceSyncEntry[] = [];
+  const scheduleDays = employee.workingSchedules?.days ?? [];
+
+  const cursor = toStartOfDay(submission.startDate);
+  const rangeEnd = toEndOfDay(submission.endDate);
+
+  // Gunakan anchor jam 12 supaya iterasi tanggal tidak ketarik shift timezone.
+  cursor.setHours(12, 0, 0, 0);
+  rangeEnd.setHours(12, 0, 0, 0);
+
+  while (cursor <= rangeEnd) {
+    // ambil hari (konversi english -> indo)
+    const scheduleDay = findScheduleDayByDate(
+      scheduleDays,
+      cursor,
+      DEFAULT_TIMEZONE,
+    );
+
+    // 
+    if (!hasActiveShiftOnDay(scheduleDay) || !scheduleDay.shift) {
+      cursor.setDate(cursor.getDate() + 1);
+      continue;
+    }
+
+    const dateKey = toJakartaDateKey(cursor);
+    const dayStart = new Date(`${dateKey}T00:00:00.000${JAKARTA_UTC_OFFSET}`);
+    const dayEnd = new Date(`${dateKey}T23:59:59.999${JAKARTA_UTC_OFFSET}`);
+    const attendanceWindow = buildAttendanceWindow(dateKey, scheduleDay.shift);
+
+    // cari data absensi yang udah ada
+    const existingAttendance = await tx.attendances.findFirst({
+      where: {
+        employeeId: employee.id,
+        createdAt: { gte: dayStart, lte: dayEnd },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // kalau ada absensi 
+    if (existingAttendance?.checkIn || existingAttendance?.checkOut) {
+      attendanceSync.push({
+        dateKey,
+        attendanceId: existingAttendance.id,
+        action: "skipped",
+      });
+      cursor.setDate(cursor.getDate() + 1);
+      continue;
+    }
+
+    // template untuk date di tanggal terkait
+    const attendancePayload = {
+      employeeId: employee.id,
+      shiftNameSnapshot: attendanceWindow.shiftNameSnapshot,
+      expectedCheckInSnapshot: attendanceWindow.expectedCheckInSnapshot,
+      expectedCheckOutSnapshot: attendanceWindow.expectedCheckOutSnapshot,
+      status: AttendanceStatus.LEAVE,
+      statusCheckOut: null,
+      isManualEntry: true,
+      manualReason: `Pengajuan ${submission.type} disetujui`,
+      manualNotes: submission.reason.trim(),
+      manualEntryBy: actor.id,
+      manualEntryAt: new Date(),
+      manualEntryByRole: actor.role,
+      deviceInfo: "SUBMISSION_APPROVAL",
+      createdAt: dayStart,
+    };
+
+    // kalau ada data attendance update jadi leave
+    if (existingAttendance) {
+      const updatedAttendance = await tx.attendances.update({
+        where: { id: existingAttendance.id },
+        data: {
+          ...attendancePayload,
+        },
+      });
+
+      attendanceSync.push({
+        dateKey,
+        attendanceId: updatedAttendance.id,
+        action: "updated",
+      });
+    } else {
+      // kalau gak ada
+      const createdAttendance = await tx.attendances.create({
+        data: attendancePayload,
+      });
+
+      attendanceSync.push({
+        dateKey,
+        attendanceId: createdAttendance.id,
+        action: "created",
+      });
+    }
+
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return attendanceSync;
+}
+
 /** Mengekspor SubmissionService untuk kebutuhan modul ini. */
 export const SubmissionService = {
+  /** Mendapatkan semua pengajuan dengan filter dan pagination. */
   async getAll(params: SubmissionListParams = {}) {
     const { page = 1, limit = 20, status, type, search } = params;
 
@@ -74,6 +252,7 @@ export const SubmissionService = {
     };
   },
 
+  /** Mendapatkan pengajuan milik pengguna tertentu (sendiri) dengan filter dan pagination. */
   async getMine(
     userId: string,
     params: Pick<
@@ -118,6 +297,12 @@ export const SubmissionService = {
     };
   },
 
+  /**
+   * Mendapatkan detail pengajuan berdasarkan ID-nya, jika user admin atau pemilik pengajuan.
+   * @param submissionId id pengajuan yang ingin diambil detailnya
+   * @param actor  objek yang berisi informasi tentang pengguna yang melakukan request, digunakan untuk validasi akses dan pencatatan audit log
+   * @returns  detail pengajuan jika ditemukan dan pengguna memiliki akses, atau error jika tidak ditemukan atau tidak memiliki akses
+   */
   async getDetailById(
     submissionId: string,
     actor: { userId: string; isAdmin: boolean },
@@ -152,6 +337,13 @@ export const SubmissionService = {
     return submission;
   },
 
+  /**
+   * Membuat pengajuan
+   * @param userId ID pengguna yang membuat pengajuan, harus valid dan terdaftar di database
+   * @param payload objek yang berisi data pengajuan yang ingin dibuat, harus memenuhi validasi yang ditentukan di SubmissionsCreatePayload
+   * @param actor objek yang berisi informasi tentang pengguna yang melakukan request, digunakan untuk pencatatan audit log
+   * @returns data pengajuan yang baru dibuat jika berhasil, atau error jika terjadi kegagalan validasi, konflik data, atau kegagalan saat mengunggah lampiran ke Cloudinary
+   */
   async create(
     userId: string,
     payload: SubmissionsCreatePayload,
@@ -273,6 +465,7 @@ export const SubmissionService = {
       );
     }
 
+    // ? inisialisasi variable biar bisa diakses di blok catch untuk cleanup jika terjadi error
     let uploadedAttachment: {
       url: string;
       publicId: string;
@@ -349,6 +542,12 @@ export const SubmissionService = {
     }
   },
 
+  /**
+   * Hapus berdasarkan ID-nya, hanya untuk pengajuan dengan status REJECTED dan dalam jangka waktu 48 jam setelah penolakan, serta bukan milik sendiri.
+   * @param id ID pengguna pemilik pengajuan
+   * @param actor objek yang berisi informasi tentang pengguna yang melakukan request, digunakan untuk pencatatan audit log
+   * @returns data pengajuan yang sudah dihapus jika berhasil, atau error jika pengajuan tidak ditemukan, tidak memenuhi syarat untuk dihapus, atau terjadi kegagalan saat menghapus lampiran dari Cloudinary
+   */
   async deleteById(id: string, actor: AuditActor) {
     const existing = await prisma.submissions.findUnique({ where: { id } });
     if (!existing) {
@@ -419,6 +618,15 @@ export const SubmissionService = {
     return deleted;
   },
 
+  /**
+   * Memperbarui status pengajuan berdasarkan ID-nya, hanya untuk pengajuan dengan status PENDING.
+   * @param payload objek yang berisi data pembaruan status pengajuan
+   * @param id ID pengajuan yang ingin diperbarui
+   * @param adminId ID admin yang melakukan pembaruan
+   * @param adminRole peran admin yang melakukan pembaruan
+   * @returns data pengajuan yang diperbarui jika berhasil, atau error jika pengajuan tidak ditemukan, tidak memenuhi syarat untuk diperbarui, atau terjadi kegagalan saat memperbarui status
+   * @remarks jika status nya APPROVED, akan disinkronasi data kehadiran manual untuk setiap hari kerja yang termasuk dalam rentang tanggal pengajuan, dengan status LEAVE dan alasan manual yang sesuai. Jika status nya REJECTED, alasan penolakan wajib diisi dan akan disimpan di database.
+   */
   async updateStatus(
     payload: SubmissionStatusUpdatePayload,
     id: string,
@@ -427,53 +635,111 @@ export const SubmissionService = {
   ) {
     const { status, rejectionReason } = payload;
 
-    const existing = await prisma.submissions.findUnique({ where: { id } });
-    if (!existing) {
-      throw new Error("Not Found: Data pengajuan tidak ditemukan.");
-    }
+    const { updatedSubmission, attendanceSync, existingSnapshot } =
+      await prisma.$transaction(async (tx) => {
+        const existing = await tx.submissions.findUnique({ where: { id } });
+        if (!existing) {
+          throw new Error("Not Found: Data pengajuan tidak ditemukan.");
+        }
 
-    if (existing.userId === adminId) {
-      throw new Error(
-        "Forbidden: Anda tidak dapat memproses pengajuan milik sendiri.",
-      );
-    }
+        if (existing.userId === adminId) {
+          throw new Error(
+            "Forbidden: Anda tidak dapat memproses pengajuan milik sendiri.",
+          );
+        }
 
-    if (existing.status !== "PENDING") {
-      throw new Error(
-        "Conflict: Pengajuan ini sudah diproses dan tidak dapat diubah lagi.",
-      );
-    }
+        if (existing.status !== "PENDING") {
+          throw new Error(
+            "Conflict: Pengajuan ini sudah diproses dan tidak dapat diubah lagi.",
+          );
+        }
 
-    if (
-      status === "REJECTED" &&
-      (!rejectionReason || rejectionReason.trim() === "")
-    ) {
-      throw new Error("Bad Request: Alasan penolakan wajib diisi.");
-    }
+        // kalau di reject
+        if (
+          status === "REJECTED" &&
+          (!rejectionReason || rejectionReason.trim() === "")
+        ) {
+          throw new Error("Bad Request: Alasan penolakan wajib diisi.");
+        }
 
-    const updatedSubmission = await prisma.submissions.update({
-      where: { id },
-      data: {
-        status,
-        rejectionReason: status === "REJECTED" ? rejectionReason?.trim() : null,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            nip: true,
-            rbacRole: { select: { key: true } },
-            employees: {
+        const existingSnapshot = {
+          status: existing.status,
+          rejectionReason: existing.rejectionReason,
+        };
+
+        let approvalAttendanceSync: ApprovedAttendanceSyncEntry[] = [];
+
+        if (status === "APPROVED") {
+          const isLeaveSubmission = ["IZIN_SAKIT", "IZIN_KHUSUS"].includes(
+            existing.type,
+          );
+
+          // Izin sakit dan izin khusus tetap sinkron ke absensi manual.
+          if (isLeaveSubmission) {
+            const employee = await tx.employees.findFirst({
+              where: { userId: existing.userId },
+              include: {
+                workingSchedules: {
+                  include: {
+                    days: {
+                      include: { shift: true },
+                    },
+                  },
+                },
+              },
+            });
+
+            // Kalau data employee ada, sinkronisasi kehadiran manual untuk rentang tanggal pengajuan.
+            if (employee) {
+              approvalAttendanceSync = await syncApprovedSubmissionAttendances(
+                tx,
+                employee,
+                {
+                  type: existing.type,
+                  startDate: existing.startDate,
+                  endDate: existing.endDate,
+                  reason: existing.reason,
+                },
+                {
+                  id: adminId,
+                  role: adminRole,
+                },
+              );
+            }
+          }
+        }
+
+        const updatedSubmission = await tx.submissions.update({
+          where: { id },
+          data: {
+            status,
+            rejectionReason:
+              status === "REJECTED" ? rejectionReason?.trim() : null,
+          },
+          include: {
+            user: {
               select: {
                 id: true,
-                fullName: true,
-                email: true,
+                nip: true,
+                rbacRole: { select: { key: true } },
+                employees: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    email: true,
+                  },
+                },
               },
             },
           },
-        },
-      },
-    });
+        });
+
+        return {
+          updatedSubmission,
+          attendanceSync: approvalAttendanceSync,
+          existingSnapshot,
+        };
+      });
 
     await writeAuditLog({
       actor: {
@@ -486,13 +752,14 @@ export const SubmissionService = {
       entityId: id,
       changes: {
         before: {
-          status: existing.status,
-          rejectionReason: existing.rejectionReason,
+          status: existingSnapshot.status,
+          rejectionReason: existingSnapshot.rejectionReason,
         },
         after: {
           status,
           rejectionReason:
             status === "REJECTED" ? rejectionReason?.trim() : null,
+          attendanceSync,
         },
       },
       reason: status === "REJECTED" ? rejectionReason?.trim() : undefined,
@@ -504,7 +771,7 @@ export const SubmissionService = {
   // & Tarik kembali pengajuan oleh karyawan yang mengajukan
   async retract(id: string, userId: string) {
     const existing = await prisma.submissions.findUnique({ where: { id } });
-    
+
     // ^ validasi data pengajuan
     if (!existing) {
       throw new Error("Not Found: Data pengajuan tidak ditemukan.");
@@ -524,20 +791,22 @@ export const SubmissionService = {
       );
     }
 
-    // ? hapus saja data pengajuan, karena belum diproses sama sekali
+    // ^ hapus saja data pengajuan, karena belum diproses sama sekali
     const deleted = await prisma.submissions.delete({ where: { id } });
 
     // ? hapus attachment jika ada
     if (existing.attachmentPublicId) {
       try {
         await deleteSubmissionAttachment(existing.attachmentPublicId);
-      }
-      catch (error) {
-        console.error("Cloudinary cleanup failed on submission retract:", error);
+      } catch (error) {
+        console.error(
+          "Cloudinary cleanup failed on submission retract:",
+          error,
+        );
         // ? tidak menggagalkan proses tarik kembali meskipun terjadi error saat hapus lampiran, karena data pengajuan sudah dihapus dari database
       }
     }
-    
+
     try {
       await writeAuditLog({
         actor: {
@@ -558,11 +827,13 @@ export const SubmissionService = {
         },
         reason: "Pengajuan ditarik kembali oleh karyawan sebelum diproses.",
       });
+    } catch (auditError) {
+      console.error(
+        "Failed to write RETRACT_SUBMISSION audit log:",
+        auditError,
+      );
     }
-    catch (auditError) {
-      console.error("Failed to write RETRACT_SUBMISSION audit log:", auditError);
-    }
-    
+
     return deleted;
-  }
+  },
 };

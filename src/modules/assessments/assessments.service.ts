@@ -129,7 +129,10 @@ export const AssessmentsService = {
     return { isAdmin: false, divisionId };
   },
 
-  /** Hitung rata-rata skor dari array detail */
+  /** Hitung rata-rata skor dari array detail 
+   * - Jika tidak ada detail, kembalikan 0 (hindari NaN).
+   * return angka dengan maksimal 2 desimal (misal 3.75) untuk konsistensi format skor.
+  */
   _calcAvgScore(details: { score: any }[]): number {
     if (!details.length) return 0; // Guard: hindari pembagian dengan nol
     // Number() konversi Prisma Decimal → angka JS sebelum dijumlahkan
@@ -167,6 +170,11 @@ export const AssessmentsService = {
       select: {
         id: true,
         fullName: true,
+        user: {
+          select: {
+            nip: true,
+          },
+        },
         position: {
           select: {
             name: true,
@@ -178,11 +186,12 @@ export const AssessmentsService = {
           select: { id: true, assessmentDate: true },
         },
       },
-      orderBy: { fullName: "asc" },
+      orderBy: { joinDate: "asc" },
     });
 
     return employees.map((emp) => ({
       employeeId: emp.id,
+      nip: emp.user?.nip ?? "-",
       fullName: emp.fullName,
       position: emp.position?.name || "Tanpa Jabatan",
       division: emp.position?.division?.name || "-",
@@ -1137,6 +1146,10 @@ export const AssessmentsService = {
       throw new Error(`Not Found: Belum ada penilaian untuk periode ${period}`);
     }
 
+    /**
+     * Rata-rata skor dihitung dari semua detail penilaian yang visibleToEmployee = true.
+     * contoh return = 4.25 (jika ada 4 kategori dengan skor 4, 5, 4, 4)
+     */
     const avg = AssessmentsService._calcAvgScore(currentAssessment.details);
 
     const historyAssessments = await prisma.assessments.findMany({

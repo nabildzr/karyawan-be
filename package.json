@@ -35,7 +35,8 @@
   "devDependencies": {
     "@types/nodemailer": "^8.0.0",
     "bun-types": "latest",
-    "prisma": "7.4.2"
+    "prisma": "7.4.2",
+    "typedoc": "^0.28.19"
   },
   "module": "src/index.js"
 }

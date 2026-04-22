@@ -295,7 +295,7 @@ export const authPlugin = new Elysia({ name: "auth-plugin" }).derive(
   { as: "scoped" },
   async ({
     headers,
-    cookie: { auth_session },
+    cookie: { auth_session, authToken },
   }): Promise<{ auth: JWTPayload | null }> => {
     let token = "";
     const authHeader = headers.authorization;
@@ -305,6 +305,8 @@ export const authPlugin = new Elysia({ name: "auth-plugin" }).derive(
 
     if (authHeader?.toLowerCase().startsWith("bearer ")) {
       token = authHeader.substring(7);
+    } else if (authToken?.value) {
+      token = authToken.value as string;
     } else if (auth_session?.value) {
       token = auth_session.value as string;
     }

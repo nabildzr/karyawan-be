@@ -4,19 +4,19 @@ import * as jose from "jose";
 import nodemailer from "nodemailer";
 import { constants } from "../../config/constants";
 import {
-    findLoginUserByNip,
-    findResetUserByIdentifier,
-    findUserPasswordSnapshotById,
-    findUserProfileById,
-    findWebPortalPermissionByRoleId,
-    updateUserPasswordById,
+  findLoginUserByNip,
+  findResetUserByIdentifier,
+  findUserPasswordSnapshotById,
+  findUserProfileById,
+  findWebPortalPermissionByRoleId,
+  updateUserPasswordById,
 } from "./auth.repository";
 import type {
-    AuthIdentifierBodyPayload,
-    AuthLoginBodyPayload,
-    AuthMeQueryPayload,
-    AuthResetPasswordBodyPayload,
-    AuthVerifyCodeBodyPayload,
+  AuthIdentifierBodyPayload,
+  AuthLoginBodyPayload,
+  AuthMeQueryPayload,
+  AuthResetPasswordBodyPayload,
+  AuthVerifyCodeBodyPayload,
 } from "./auth.schema";
 
 const RESET_PASSWORD_TOKEN_PURPOSE = "RESET_PASSWORD";
@@ -129,15 +129,21 @@ async function sendMailWithRetry(
 /** Mengambil konfigurasi SMTP dari environment variables. */
 function getSmtpMailConfig(): SmtpMailConfig | null {
   const host = normalizeSmtpHost(process.env.SMTP_HOST);
-  const portRaw = stripOptionalQuotes(String(process.env.SMTP_PORT ?? "").trim());
+  const portRaw = stripOptionalQuotes(
+    String(process.env.SMTP_PORT ?? "").trim(),
+  );
   const port = Number(portRaw || "587");
   const user = stripOptionalQuotes(String(process.env.SMTP_USER ?? "").trim());
-  const rawPass = stripOptionalQuotes(String(process.env.SMTP_PASS ?? "").trim());
+  const rawPass = stripOptionalQuotes(
+    String(process.env.SMTP_PASS ?? "").trim(),
+  );
   const pass = /gmail\.com$/i.test(host)
     ? rawPass.replace(/\s+/g, "")
     : rawPass;
   const fromEmail = stripOptionalQuotes(
-    String(process.env.SMTP_FROM_EMAIL || user || constants.server.email).trim(),
+    String(
+      process.env.SMTP_FROM_EMAIL || user || constants.server.email,
+    ).trim(),
   );
   const fromName = stripOptionalQuotes(
     String(process.env.SMTP_FROM_NAME || constants.server.name).trim(),
@@ -148,7 +154,9 @@ function getSmtpMailConfig(): SmtpMailConfig | null {
   }
 
   const secureRaw = stripOptionalQuotes(
-    String(process.env.SMTP_SECURE ?? "").trim().toLowerCase(),
+    String(process.env.SMTP_SECURE ?? "")
+      .trim()
+      .toLowerCase(),
   );
   const secure =
     parseBooleanEnv(secureRaw) ||
@@ -156,7 +164,9 @@ function getSmtpMailConfig(): SmtpMailConfig | null {
     secureRaw === "smtps" ||
     port === 465;
   const requireTLS =
-    secureRaw === "tls" || secureRaw === "starttls" || (!secure && port === 587);
+    secureRaw === "tls" ||
+    secureRaw === "starttls" ||
+    (!secure && port === 587);
   const auth = user && pass ? { user, pass } : undefined;
 
   return {
@@ -314,7 +324,9 @@ async function verifyResetPasswordToken(
 
   const purpose = String(payload.purpose ?? "");
   const userId = String(payload.sub ?? "");
-  const passwordUpdatedAtEpochMs = Number(payload.passwordUpdatedAtEpochMs ?? 0);
+  const passwordUpdatedAtEpochMs = Number(
+    payload.passwordUpdatedAtEpochMs ?? 0,
+  );
   const codeHash = String(payload.codeHash ?? "");
 
   if (
@@ -354,7 +366,7 @@ async function sendResetCodeByIdentifier(
     codeHash: hashVerificationCode(verificationCode),
   });
 
-  const resetPath = `/admin/reset-password?token=${encodeURIComponent(resetToken)}`;
+  const resetPath = `/auth/reset-password?token=${encodeURIComponent(resetToken)}`;
   const webBaseUrl =
     process.env.WEB_BASE_URL ||
     process.env.FRONTEND_URL ||

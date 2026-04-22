@@ -12,7 +12,6 @@ export const BLOCKING_SUBMISSION_TYPES = [
   "IZIN_SAKIT",
   "IZIN_KHUSUS",
   "DINAS_LUAR",
-  "LEMBUR",
 ] as const;
 
 /** Mendefinisikan alias tipe untuk BlockingSubmissionStatus. */
@@ -26,7 +25,6 @@ export type BlockingSubmissionType =
   | "IZIN_SAKIT"
   | "IZIN_KHUSUS"
   | "DINAS_LUAR"
-  | "LEMBUR"
 
 /** Mendefinisikan alias tipe untuk BlockingSubmissionOptions. */
 export type BlockingSubmissionOptions = {
@@ -41,7 +39,6 @@ export const formatSubmissionTypeLabel = (type: string) => {
   if (type === "IZIN_SAKIT") return "izin sakit";
   if (type === "IZIN_KHUSUS") return "izin khusus";
   if (type === "DINAS_LUAR") return "dinas luar";
-  if (type === "LEMBUR") return "lembur";
   return type.toLowerCase();
 };
 

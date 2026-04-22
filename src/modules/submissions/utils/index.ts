@@ -4,7 +4,7 @@ export type SubmissionListParams = {
   page?: number;
   limit?: number;
   status?: "PENDING" | "APPROVED" | "REJECTED";
-  type?: "IZIN_SAKIT" | "IZIN_KHUSUS" | "DINAS_LUAR" | "LEMBUR";
+  type?: "IZIN_SAKIT" | "IZIN_KHUSUS" | "DINAS_LUAR"
   search?: string;
 };
 

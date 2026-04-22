@@ -13,7 +13,7 @@ import { resolveSubmissionBlockingReason } from "../../../shared/attendances/sub
 import { writeAuditLog } from "../../../shared/audit/writeAudit";
 import { toDateKey } from "../../../utils/holidayshelper";
 import { PointsService } from "../../points/points.service";
-import { CorrectAttendancePayload, ManualAttendancePayload } from "../model";
+import { CorrectAttendancePayload, ManualAttendancePayload } from "../attendances.schema";
 import { findBlockingSubmission } from "./blocking-submission.service";
 
 // & Parse date string and throw standardized validation error when invalid.
@@ -77,6 +77,9 @@ export const manualAttendance = async (
   const expectedCheckOutDate = expectedCheckOut
     ? parseDateOrThrow(expectedCheckOut, "expectedCheckOut")
     : expectedCheckInDate;
+  const targetDateKey = toDateKey(expectedCheckInDate, DEFAULT_TIMEZONE);
+  const targetDayStart = toBusinessStartOfDay(targetDateKey);
+  const targetDayEnd = toBusinessEndOfDay(targetDateKey);
 
   const rangeStart =
     expectedCheckInDate <= expectedCheckOutDate
@@ -104,14 +107,50 @@ export const manualAttendance = async (
   // & Persist manual entry and write audit log in one transaction.
   // % Simpan entri manual dan tulis audit log dalam satu transaksi.
   const attendance = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`
+      SELECT 1
+      FROM "Employees"
+      WHERE id = ${employeeId}
+      FOR UPDATE
+    `;
+
+    // Cegah duplikasi absensi manual/otomatis pada tanggal bisnis yang sama.
+    const existingAttendanceSameDate = await tx.attendances.findFirst({
+      where: {
+        employeeId,
+        OR: [
+          { createdAt: { gte: targetDayStart, lte: targetDayEnd } },
+          {
+            expectedCheckInSnapshot: {
+              gte: targetDayStart,
+              lte: targetDayEnd,
+            },
+          },
+          { checkIn: { gte: targetDayStart, lte: targetDayEnd } },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // cek joindate karyawan, jika belum masuk di tanggal absensi yang dimasukkan, tolak dengan error validasi
+    if (employee.joinDate > expectedCheckInDate) {
+      throw new Error(
+        `Bad Request: Tanggal absensi tidak valid. Karyawan baru bergabung pada ${employee.joinDate.toDateString()}.`,
+      );
+    }
+
+    if (existingAttendanceSameDate) {
+      throw new Error(
+        `Conflict: Absensi tanggal ${targetDateKey} sudah ada. Gunakan menu koreksi absensi jika perlu perubahan.`,
+      );
+    }
+
     const attendance = await tx.attendances.create({
       data: {
         employeeId,
         shiftNameSnapshot: shiftName,
-        expectedCheckInSnapshot: new Date(expectedCheckIn),
-        expectedCheckOutSnapshot: expectedCheckOut
-          ? new Date(expectedCheckOut)
-          : null,
+        expectedCheckInSnapshot: expectedCheckInDate,
+        expectedCheckOutSnapshot: expectedCheckOutDate,
         checkIn: checkIn ? new Date(checkIn) : null,
         checkOut: checkOut ? new Date(checkOut) : null,
         status: status as any,
@@ -123,6 +162,8 @@ export const manualAttendance = async (
         manualNotes: note,
         manualReason: reason,
         deviceInfo: `MANUAL_ENTRY_BY_${admin.rbacRole?.key || "SYSTEM"}`,
+        // Pastikan laporan berbasis createdAt masuk ke tanggal absensi yang dipilih admin.
+        createdAt: expectedCheckInDate,
       },
       include: { employee: { select: { fullName: true } } },
     });

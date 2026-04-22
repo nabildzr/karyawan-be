@@ -19,12 +19,12 @@ export type DivisionRecord = {
       isActive: boolean;
       canAccessAdmin: boolean;
     } | null;
-    employees: Array<{
+    employees: {
       id: string;
       fullName: string;
       email: string | null;
       phoneNumber: string | null;
-    }>;
+    } | null;
   } | null;
   positions?: Array<{
     id: string;

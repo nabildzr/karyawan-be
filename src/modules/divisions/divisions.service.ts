@@ -29,6 +29,17 @@ type DivisionListResultPayload = {
 
 /** Memetakan data manager mentah ke payload response endpoint. */
 function toManagerPayload(manager: NonNullable<DivisionRecord["manager"]>): DivisionManagerPayload {
+  const employees = manager.employees
+    ? [
+        {
+          id: manager.employees.id,
+          fullName: manager.employees.fullName,
+          email: manager.employees.email,
+          phoneNumber: manager.employees.phoneNumber,
+        },
+      ]
+    : [];
+
   return {
     id: manager.id,
     nip: manager.nip,
@@ -39,14 +50,9 @@ function toManagerPayload(manager: NonNullable<DivisionRecord["manager"]>): Divi
           name: manager.rbacRole.name,
           isActive: manager.rbacRole.isActive,
           canAccessAdmin: manager.rbacRole.canAccessAdmin,
-        }
+        } 
       : null,
-    employees: manager.employees.map((employee) => ({
-      id: employee.id,
-      fullName: employee.fullName,
-      email: employee.email,
-      phoneNumber: employee.phoneNumber,
-    })),
+    employees,
   };
 }
 

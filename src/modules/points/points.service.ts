@@ -977,7 +977,7 @@ export const createPointsService = (db: any) => {
             userId,
             transactionType: toLedgerTransactionType(amount),
             amount,
-            description: `[${source}] Rule ${rule.ruleName} (${toSignedPointLabel(amount)}) untuk absensi ${attendanceId}`,
+            description: `[${source}] Rule ${rule.ruleName} (${toSignedPointLabel(amount)})`,
             referenceEntity,
             referenceId,
             actor,

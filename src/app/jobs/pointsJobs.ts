@@ -91,6 +91,8 @@ const calculateRemainingDays = (expiresAt: Date, now = new Date()) => {
   return Math.ceil(diff / MS_PER_DAY);
 };
 
+// Start up = jalanin sekali saat server mulai untuk sinkronisasi awal.
+// Daily cron = jalanin setiap hari untuk memastikan status token tetap akurat sesuai expiresAt.
 const reconcileTokenExpiryState = async (trigger: "STARTUP" | "DAILY_CRON") => {
   const now = new Date();
   const tokens = await withPrismaReconnectRetry(

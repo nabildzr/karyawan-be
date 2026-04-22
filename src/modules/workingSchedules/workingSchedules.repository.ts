@@ -88,7 +88,28 @@ const findScheduleByIdDetailed = (id: string, db?: any) => {
     where: { id },
     include: {
       days: { include: { shift: true } },
-      employees: { select: { id: true, fullName: true } },
+      employees: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          user: {
+            select: {
+              nip: true,
+            },
+          },
+          position: {
+            select: {
+              name: true,
+              division: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
       _count: { select: { employees: true } },
     },
   });

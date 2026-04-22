@@ -40,6 +40,7 @@ enum AttendanceStatus {
   ABSENT // Alpa / Gak masuk
   LEAVE // Izin / Cuti
   OFF // Memang jadwalnya libur
+  INCOMPLETE // Data absensi gak lengkap (misal: check-in ada tapi check-out gak ada)
 }
 
 // & Core identity and RBAC authorization models.
@@ -238,18 +239,6 @@ model Employees {
   workingSchedulesId String?
 }
 
-// Pivot: Shift <-> Schedule
-// model ShiftSchedulePivot {
-//   id         String    @id @default(uuid())
-//   employeeId String
-//   employee   Employees @relation(fields: [employeeId], references: [id])
-//   shiftId    String
-//   shift      Shifts    @relation(fields: [shiftId], references: [id])
-//   scheduleId String
-//   schedule   Schedules @relation(fields: [scheduleId], references: [id])
-//   createdAt  DateTime  @default(now())
-//   updatedAt  DateTime  @updatedAt
-// }
 
 model EmployeeDetails {
   employeeId        String    @id
@@ -331,61 +320,6 @@ model AssessmentDetails {
 
 // & Geofence model used as attendance location boundary source.
 // % Model geofence yang dipakai sebagai sumber batas lokasi absensi.
-
-// // Tunjangan berdasarkan jabatan
-// model PositionAllowances {
-//   id        String   @id @default(uuid())
-//   amount    Int
-//   // amount    Decimal  @db.Decimal(15, 2)
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-
-//   positionId String
-//   position   Positions @relation(fields: [positionId], references: [id])
-
-//   positionAllowancePivots PositionAllowancePivot[]
-// }
-
-// // Pivot: Tunjangan Jabatan <-> Karyawan
-// model PositionAllowancePivot {
-//   id         String    @id @default(uuid())
-//   employeeId String
-
-//   positionAllowanceId String
-//   positionAllowance   PositionAllowances @relation(references: [id], fields: [positionAllowanceId])
-
-//   givenAt   DateTime?
-//   notes     String?
-//   createdAt DateTime  @default(now())
-//   updatedAt DateTime  @updatedAt
-// }
-
-// // Tunjangan individual (bonus, dll)
-// model EmployeeAllowances {
-//   id        String   @id @default(uuid())
-//   name      String
-//   amount    Int
-//   // amount    Decimal  @db.Decimal(15, 2)
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-
-//   employeeAllowancePivots EmployeeAllowancePivot[]
-// }
-
-// // Pivot: Tunjangan Individual <-> Karyawan
-// model EmployeeAllowancePivot {
-//   id         String    @id @default(uuid())
-//   employeeId String
-
-//   employeeAllowanceId String
-//   employeeAllowance   EmployeeAllowances @relation(references: [id], fields: [employeeAllowanceId])
-
-//   givenAt   DateTime?
-//   notes     String?
-//   createdAt DateTime  @default(now())
-//   updatedAt DateTime  @updatedAt
-// }
-
 model Geofences {
   id                  String        @id @default(uuid())
   name                String
@@ -398,13 +332,11 @@ model Geofences {
   attendancesCheckOut Attendances[] @relation("AttendanceCheckOut")
 }
 
-// & Submission enums and models used by employee request workflow.
-// % Enum dan model pengajuan yang dipakai alur request karyawan.
+// & Enum dan model pengajuan yang dipakai alur request karyawan.
 enum SubmissionType {
   IZIN_SAKIT
   IZIN_KHUSUS
   DINAS_LUAR
-  LEMBUR
 }
 
 enum SubmissionStatus {
@@ -413,9 +345,7 @@ enum SubmissionStatus {
   REJECTED // Ditolak (Warna Merah)
 }
 
-// ==========================================
-// & MODEL PENGAJUAN
-// ==========================================
+// & PENGAJUAN
 model Submissions {
   id     String @id @default(uuid())
   userId String
@@ -453,10 +383,6 @@ model Shifts {
 
   isCrossDay Boolean  @default(false) // Untuk handle shift yang melewati tengah malam
   createdAt  DateTime @default(now())
-
-  // Relasi ke detail hari
-  // workingScheduleId String?
-  // workingSchedule   WorkingSchedules? @relation(fields: [workingScheduleId], references: [id], onDelete: Cascade)
 
   scheduleDays ScheduleDays[]
 }
@@ -496,20 +422,6 @@ model PublicHolidays {
 
 // & Attendance and audit models for presence records and traceability.
 // % Model absensi dan audit untuk pencatatan kehadiran serta jejak perubahan.
-
-// Jadwal absensi user
-// model Schedules {
-//   id         String   @id @default(uuid())
-//   name       String? // contoh: "Jadwal 1"
-//   daysOfWeek String // contoh: "Mon,Tue,Wed,Thu,Fri"
-//   createdAt  DateTime @default(now())
-//   updatedAt  DateTime @updatedAt
-
-//   // shiftSchedulePivots ShiftSchedulePivot[]
-//   employees Employees[]
-// }
-
-// Data absensi
 model Attendances {
   id         String    @id @default(uuid())
   employeeId String
@@ -585,18 +497,6 @@ model AuditLogs {
   reason    String? // Alasan ngedit: "HP karyawan mati, diwakilin"
   createdAt DateTime @default(now())
 }
-
-// model AuditLogs {
-//   id          String   @id @default(uuid())
-//   action      String   // Aksi spesifik, misal: "APPROVE_SUBMISSION", "REJECT_SUBMISSION"
-//   entity      String   // Nama tabel yang diubah, misal: "Submissions" atau "Attendances"
-//   entityId    String   // ID unik dari baris data yang diubah
-//   userId      String   // ID Admin/HR yang ngelakuin aksi
-//   userRole    String   // Peran user, misal: "ADMIN", "MANAGER"
-//   changes     Json     // Data JSON sebelum & sesudah diubah
-//   reason      String?  // Catatan opsional / alasan penolakan
-//   createdAt   DateTime @default(now())
-// }
 
 model UserFaces {
   id     String @id @default(uuid())

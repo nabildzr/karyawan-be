@@ -220,4 +220,28 @@ export const submissionRoutes = new Elysia({
       params: SubmissionIdParamsDTO,
       detail: { summary: "Update submission status (Admin)" },
     },
-  );
+  )
+  // TODO: tarik kembali pengajuan (karyawan) - endpoint baru: POST /:id/retract
+  .delete(
+    "/:id/retract",
+    async ({ auth, params, set }) => {
+      try {
+        const data = await SubmissionService.retract(
+          params.id,
+          auth!.sub,
+        );
+
+        set.status = HttpStatusEnum.HTTP_200_OK;
+        return successResponse({
+          data,
+          message: "Berhasil menarik kembali pengajuan.",
+        }); 
+      } catch (error: any) {        return mapError(error, set);
+      }
+    },
+    {
+      beforeHandle: [checkAuth],
+      params: SubmissionIdParamsDTO,
+      detail: { summary: "Retract submission (Karyawan)" },
+    },
+  )

@@ -1,3 +1,4 @@
+import prisma from "../../config/prisma";
 import {
   findScheduleDayByDate,
   getDayNameID,
@@ -8,13 +9,16 @@ import { formatSubmissionTypeLabel } from "../../shared/attendances/submissions"
 import { AuditActor } from "../../shared/audit/actor";
 import { writeAuditLog } from "../../shared/audit/writeAudit";
 import { toDateKey } from "../../utils/holidayshelper";
+import {
+  BUSINESS_UTC_OFFSET,
+  sortDays,
+  toDateStr,
+} from "./utils/transform.util";
+import { WorkingSchedulesRepository } from "./workingSchedules.repository";
 import type {
   AssignEmployeesPayload,
   CreateSchedulePayload,
 } from "./workingSchedules.schema";
-import { WorkingSchedulesRepository } from "./workingSchedules.repository";
-import { BUSINESS_UTC_OFFSET, sortDays, toDateStr } from "./utils/transform.util";
-import prisma from "../../config/prisma";
 
 export const WorkingScheduleService = {
   // Create schedule and schedule days.
@@ -138,7 +142,10 @@ export const WorkingScheduleService = {
       }
 
       await WorkingSchedulesRepository.updateScheduleName(scheduleId, name, tx);
-      await WorkingSchedulesRepository.deleteScheduleDaysByScheduleId(scheduleId, tx);
+      await WorkingSchedulesRepository.deleteScheduleDaysByScheduleId(
+        scheduleId,
+        tx,
+      );
 
       const scheduleDayData: {
         dayOfWeek: string;
@@ -193,10 +200,11 @@ export const WorkingScheduleService = {
         );
       }
 
-      const updatedSchedule = await WorkingSchedulesRepository.findScheduleByIdDetailed(
-        scheduleId,
-        tx,
-      );
+      const updatedSchedule =
+        await WorkingSchedulesRepository.findScheduleByIdDetailed(
+          scheduleId,
+          tx,
+        );
 
       if (!updatedSchedule) {
         throw new Error(
@@ -215,7 +223,7 @@ export const WorkingScheduleService = {
           before: {
             name: existingSchedule.name,
             employeeIds: existingSchedule.employees.map(
-              (employee) => employee.id,
+              (employee: { id: string }) => employee.id,
             ),
             days: sortDays(existingSchedule.days).map((day: any) => ({
               dayOfWeek: day.dayOfWeek,
@@ -229,7 +237,7 @@ export const WorkingScheduleService = {
           after: {
             name: updatedSchedule.name,
             employeeIds: updatedSchedule.employees.map(
-              (employee) => employee.id,
+              (employee: { id: string }) => employee.id,
             ),
             days: updatedSchedule.days.map((day: any) => ({
               dayOfWeek: day.dayOfWeek,
@@ -258,16 +266,13 @@ export const WorkingScheduleService = {
 
     const [schedules, totalSchedules, activeAssignments, recentChanges] =
       await Promise.all([
-        WorkingSchedulesRepository.findSchedulesForList(
-          withDays,
-          withShifts,
-        ),
+        WorkingSchedulesRepository.findSchedulesForList(withDays, withShifts),
         WorkingSchedulesRepository.countWorkingSchedules(),
         WorkingSchedulesRepository.countAssignedEmployees(),
         WorkingSchedulesRepository.countSchedulesSince(sevenDaysAgo),
       ]);
 
-    const data = schedules.map((schedule) => ({
+    const data = schedules.map((schedule: { days: any[] }) => ({
       ...schedule,
       ...(withDays && { days: sortDays(schedule.days) }),
     }));
@@ -280,7 +285,8 @@ export const WorkingScheduleService = {
 
   // Get schedule detail by id.
   async findById(id: string) {
-    const schedule = await WorkingSchedulesRepository.findScheduleByIdDetailed(id);
+    const schedule =
+      await WorkingSchedulesRepository.findScheduleByIdDetailed(id);
 
     if (!schedule) {
       throw new Error("Not Found: Jadwal kerja tidak ditemukan.");
@@ -296,17 +302,22 @@ export const WorkingScheduleService = {
     { employeeIds }: AssignEmployeesPayload,
     actor: AuditActor,
   ) {
-    const exists = await WorkingSchedulesRepository.findScheduleByIdWithEmployees(
-      scheduleId,
-    );
+    const exists =
+      await WorkingSchedulesRepository.findScheduleByIdWithEmployees(
+        scheduleId,
+      );
 
     if (!exists) {
       throw new Error("Not Found: Jadwal kerja tidak ditemukan.");
     }
 
-    await WorkingSchedulesRepository.setScheduleEmployees(scheduleId, employeeIds);
+    await WorkingSchedulesRepository.setScheduleEmployees(
+      scheduleId,
+      employeeIds,
+    );
 
-    const updated = await WorkingSchedulesRepository.findScheduleByIdDetailed(scheduleId);
+    const updated =
+      await WorkingSchedulesRepository.findScheduleByIdDetailed(scheduleId);
 
     if (!updated) {
       throw new Error("Not Found: Jadwal kerja tidak ditemukan.");
@@ -319,10 +330,14 @@ export const WorkingScheduleService = {
       entityId: scheduleId,
       changes: {
         before: {
-          employeeIds: exists.employees.map((employee) => employee.id),
+          employeeIds: exists.employees.map(
+            (employee: { id: string }) => employee.id,
+          ),
         },
         after: {
-          employeeIds: updated.employees.map((employee) => employee.id),
+          employeeIds: updated.employees.map(
+            (employee: { id: string }) => employee.id,
+          ),
         },
       },
     });
@@ -337,9 +352,8 @@ export const WorkingScheduleService = {
     endDate: string,
     timezone: string,
   ) {
-    const employee = await WorkingSchedulesRepository.findEmployeeWithWorkingSchedule(
-      userId,
-    );
+    const employee =
+      await WorkingSchedulesRepository.findEmployeeWithWorkingSchedule(userId);
 
     if (!employee) {
       throw new Error("Not Found: Data karyawan tidak ditemukan.");
@@ -397,9 +411,18 @@ export const WorkingScheduleService = {
       ),
     ]);
 
-    const attendanceMap = new Map<string, string>();
+    const attendanceMap = new Map<
+      string,
+      {
+        status: string;
+        hasCheckOut: boolean;
+      }
+    >();
     for (const attendance of attendances) {
-      attendanceMap.set(toDateKey(attendance.createdAt, timezone), attendance.status);
+      attendanceMap.set(toDateKey(attendance.createdAt, timezone), {
+        status: attendance.status,
+        hasCheckOut: Boolean(attendance.checkOut),
+      });
     }
 
     const holidayMap = new Map<string, string>();
@@ -483,7 +506,7 @@ export const WorkingScheduleService = {
           }
         : null;
 
-      const attendanceStatus = attendanceMap.get(dateStr);
+      const attendance = attendanceMap.get(dateStr);
       const submissionNote = submission
         ? `Ada pengajuan ${formatSubmissionTypeLabel(submission.type)} (${submission.status}).`
         : null;
@@ -492,7 +515,8 @@ export const WorkingScheduleService = {
         isHoliday,
         holidayName,
         submissionNote,
-        attendanceStatus,
+        attendanceStatus: attendance?.status,
+        hasCheckOut: attendance?.hasCheckOut,
         dateKey: dateStr,
         todayKey: today,
       });

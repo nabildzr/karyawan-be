@@ -6,6 +6,7 @@ import { JAKARTA_UTC_OFFSET } from "../../config/timezone";
 /** Mendefinisikan alias tipe untuk MobileSummaryDayStatus. */
 export type MobileSummaryDayStatus =
   | "completed"
+  | "ongoing"
   | "absent"
   | "missed"
   | "off"
@@ -24,9 +25,7 @@ export type ScheduleRangeValidationIssue = {
   reason: ScheduleRangeValidationIssueReason;
 };
 
-// & Mapping from English weekday names to Indonesian labels.
-// % Pemetaan nama hari berbahasa Inggris ke label Indonesia.
-/** Mengekspor EN_TO_ID untuk kebutuhan modul ini. */
+/**  Pemetaan nama hari berbahasa Inggris ke label Indonesia. */
 export const EN_TO_ID: Record<string, string> = {
   Monday: "Senin",
   Tuesday: "Selasa",
@@ -37,9 +36,7 @@ export const EN_TO_ID: Record<string, string> = {
   Sunday: "Minggu",
 };
 
-// & Resolve Indonesian weekday name from a date in provided timezone.
-// % Ambil nama hari Indonesia dari tanggal pada timezone yang diberikan.
-/** Mengekspor getDayNameID untuk kebutuhan modul ini. */
+/**  Ambil nama hari Indonesia dari tanggal pada timezone yang diberikan. */
 export const getDayNameID = (date: Date, timezone: string): string => {
   const en = date.toLocaleDateString("en-US", {
     weekday: "long",
@@ -48,8 +45,7 @@ export const getDayNameID = (date: Date, timezone: string): string => {
   return EN_TO_ID[en] ?? en;
 };
 
-// & Resolve English weekday name from date and timezone.
-// % Ambil nama hari Inggris dari tanggal dan timezone.
+/** Ambil nama hari Inggris dari tanggal dan timezone. */
 const getDayNameEN = (date: Date, timezone: string): string => {
   return date.toLocaleDateString("en-US", {
     weekday: "long",
@@ -57,18 +53,14 @@ const getDayNameEN = (date: Date, timezone: string): string => {
   });
 };
 
-// & Normalize day name for case-insensitive matching.
-// % Normalisasi nama hari agar pencocokan tidak peka huruf besar-kecil.
+/** Normalisasi nama hari agar pencocokan tidak peka huruf besar-kecil. */
 const normalizeDayName = (value: string) => value.trim().toLowerCase();
 
-// & Convert date to YYYY-MM-DD key using requested timezone.
-// % Ubah tanggal menjadi kunci YYYY-MM-DD sesuai timezone yang diminta.
+/** Ubah tanggal menjadi kunci YYYY-MM-DD sesuai timezone yang diminta. */
 const toDateKeyByTimezone = (date: Date, timezone: string) =>
   date.toLocaleDateString("sv-SE", { timeZone: timezone });
 
-// & Find matching schedule day by date with EN/ID day-name tolerance.
-// % Cari hari jadwal yang cocok berdasarkan tanggal dengan toleransi nama EN/ID.
-/** Mengekspor findScheduleDayByDate untuk kebutuhan modul ini. */
+/** Cari hari jadwal yang cocok berdasarkan tanggal dengan toleransi nama EN/ID. */
 export const findScheduleDayByDate = <T extends { dayOfWeek: string }>(
   days: T[] = [],
   date: Date,
@@ -88,18 +80,14 @@ export const findScheduleDayByDate = <T extends { dayOfWeek: string }>(
   );
 };
 
-// & Alias helper for today's schedule day lookup.
-// % Helper alias untuk mencari jadwal hari ini.
-/** Mengekspor findScheduleDayForToday untuk kebutuhan modul ini. */
+/** Helper alias untuk mencari jadwal hari ini. */
 export const findScheduleDayForToday = <T extends { dayOfWeek: string }>(
   days: T[] = [],
   date: Date,
   timezone: string,
 ): T | null => findScheduleDayByDate(days, date, timezone);
 
-// & Type guard that ensures schedule day is active and has shift data.
-// % Type guard untuk memastikan hari jadwal aktif dan memiliki data shift.
-/** Mengekspor hasActiveShiftOnDay untuk kebutuhan modul ini. */
+/** Type guard untuk memastikan hari jadwal aktif dan memiliki data shift. */
 export const hasActiveShiftOnDay = <
   T extends { isActive?: boolean | null; shift?: unknown | null },
 >(
@@ -107,9 +95,7 @@ export const hasActiveShiftOnDay = <
 ): scheduleDay is T & { isActive: true; shift: NonNullable<T["shift"]> } =>
   Boolean(scheduleDay?.isActive && scheduleDay.shift);
 
-// & Scan date range and return first invalid schedule configuration encountered.
-// % Pindai rentang tanggal dan kembalikan konfigurasi jadwal pertama yang tidak valid.
-/** Mengekspor findFirstInvalidScheduleDateInRange untuk kebutuhan modul ini. */
+/** Pindai rentang tanggal dan kembalikan konfigurasi jadwal pertama yang tidak valid.  */
 export const findFirstInvalidScheduleDateInRange = <
   T extends {
     dayOfWeek: string;
@@ -122,19 +108,17 @@ export const findFirstInvalidScheduleDateInRange = <
   endDate: Date,
   timezone: string,
 ): ScheduleRangeValidationIssue | null => {
-  // & Use noon anchor to avoid DST-related date shifting while iterating.
-  // % Gunakan anchor jam 12 siang untuk menghindari pergeseran tanggal akibat DST.
-
+  /**  Gunakan anchor jam 12 siang untuk menghindari pergeseran tanggal akibat DST. */
   // ? awal
   const cursor = new Date(startDate);
   cursor.setHours(12, 0, 0, 0);
 
-  // ? akhir 
+  // ? akhir
   const rangeEnd = new Date(endDate);
   rangeEnd.setHours(12, 0, 0, 0);
 
   // ? jika awal dan akhir sama-sama 2024-12-01, maka cursor akan tetap di 2024-12-01 selama iterasi
-  // ? sehingga tidak akan terpengaruh jika misalnya ada perubahan jam akibat DST di tengah bulan tersebut. 
+  // ? sehingga tidak akan terpengaruh jika misalnya ada perubahan jam akibat DST di tengah bulan tersebut.
   // ? coba dulu cari masalah pada setiap tanggal, jika ketemu langsung return issue-nya, kalau sampai habis berarti aman
   /* ? proses `while` loop ini memeriksa rentang tanggal dari `cursor` hingga `rangeEnd` dan memeriksa setiap
   tanggal untuk mendeteksi masalah validasi hari jadwal. Berikut ini rincian dari apa yang dilakukannya: */
@@ -164,15 +148,14 @@ export const findFirstInvalidScheduleDateInRange = <
   return null;
 };
 
-// & Resolve mobile calendar status and note from schedule/holiday/attendance inputs.
-// % Tentukan status dan catatan kalender mobile dari input jadwal/libur/absensi.
-/** Mengekspor resolveMobileSummaryDayStatus untuk kebutuhan modul ini. */
+/** Tentukan status dan catatan kalender mobile dari input jadwal/libur/absensi.  */
 export const resolveMobileSummaryDayStatus = (params: {
   hasActiveScheduleDay: boolean;
   isHoliday: boolean;
   holidayName?: string | null;
   submissionNote?: string | null;
   attendanceStatus?: string | null;
+  hasCheckOut?: boolean;
   dateKey: string;
   todayKey: string;
 }): { status: MobileSummaryDayStatus; note: string | null } => {
@@ -201,6 +184,28 @@ export const resolveMobileSummaryDayStatus = (params: {
     params.attendanceStatus === "PRESENT" ||
     params.attendanceStatus === "LATE"
   ) {
+    // ? Jika belum ada check-out tercatat, statusnya ongoing untuk hari ini, missed untuk hari sebelumnya.
+    if (!params.hasCheckOut) {
+      // ? Jika tanggal hari ini atau di masa depan, anggap sebagai ongoing karena absensi belum lengkap tapi masih bisa dilengkapi dengan koreksi absensi.
+      // ? dateKey = 2024-12-01, todayKey = 2024-12-01 => ongoing
+      const isToday = params.dateKey === params.todayKey;
+
+      if (params.dateKey >= params.todayKey) {
+        return {
+          status: "ongoing",
+          note:
+            params.dateKey === params.todayKey
+              ? "Check-in sudah tercatat, check-out belum dilakukan."
+              : "Absensi belum lengkap karena check-out belum tercatat.",
+        };
+      }
+
+      return {
+        status: "missed",
+        note: "Absensi belum lengkap karena check-out belum tercatat.",
+      };
+    }
+
     return { status: "completed", note: null };
   }
 
@@ -227,24 +232,21 @@ export const resolveMobileSummaryDayStatus = (params: {
   };
 };
 
-// & Parse HH:mm string into hour and minute numbers.
-// % Parse string HH:mm menjadi angka jam dan menit.
-/** Mengekspor parseTime untuk kebutuhan modul ini. */
+/** Parse HH:mm string into hour and minute numbers.  */
+/** Parse string HH:mm menjadi angka jam dan menit.  */
 export const parseTime = (t: string) => {
   const [h, m] = t.split(":").map(Number);
   return { hours: h, minutes: m };
 };
 
 interface CheckInPunctualityMetrics {
-  diffMinutes: number; // & Positive if late, negative if early, zero if on time.
-  lateMinutes: number; // & Minutes late (0 if on time or early).
-  minutesEarly: number; // & Minutes early (0 if on time or late).
-  isLate: boolean; // & True if actual check-in is after expected time.
+  diffMinutes: number; // & Positive kalo telat, negatif kalo awal banget, Zero (0) kalo tepat waktu.  
+  lateMinutes: number; // & Minutes terlambat (0 if on time or early).
+  minutesEarly: number; // & Minutes awal (0 if on time or late).
+  isLate: boolean; // & True if actual check-in ketika diluar waktu yang ditentukan (telat).
 }
 
-// & Calculate punctuality metrics for check-in based on expected schedule time.
-// % Hitung metrik ketepatan waktu check-in berdasarkan jam jadwal.
-/** Mengekspor calculateCheckInPunctuality untuk kebutuhan modul ini. */
+/** Hitung metrik ketepatan waktu check-in berdasarkan jam jadwal.  */
 export const calculateCheckInPunctuality = (
   actualCheckIn: Date | null | undefined,
   expectedCheckIn: Date | null | undefined,
@@ -270,9 +272,7 @@ export const calculateCheckInPunctuality = (
   };
 };
 
-// & Build business day boundaries for a date based on timezone day key.
-// % Bangun batas hari bisnis untuk tanggal berdasarkan day key timezone.
-/** Mengekspor getDayRangeByTimezone untuk kebutuhan modul ini. */
+/** Bangun batas hari bisnis untuk tanggal berdasarkan day key timezone.  */
 export const getDayRangeByTimezone = (date: Date, timezone: string) => {
   const dayKey = date.toLocaleDateString("sv-SE", { timeZone: timezone });
   const dayStart = new Date(`${dayKey}T00:00:00.000${JAKARTA_UTC_OFFSET}`);
@@ -280,23 +280,17 @@ export const getDayRangeByTimezone = (date: Date, timezone: string) => {
   return { dayKey, dayStart, dayEnd };
 };
 
-// & Convert business date key into start-of-day Date using Jakarta offset.
-// % Ubah date key bisnis menjadi Date awal hari dengan offset Jakarta.
-/** Mengekspor toBusinessStartOfDay untuk kebutuhan modul ini. */
+/**  Ubah date key bisnis menjadi Date awal hari dengan offset Jakarta. */
 export const toBusinessStartOfDay = (dateKey: string) => {
   return new Date(`${dateKey}T00:00:00.000${JAKARTA_UTC_OFFSET}`);
 };
 
-// & Convert business date key into end-of-day Date using Jakarta offset.
-// % Ubah date key bisnis menjadi Date akhir hari dengan offset Jakarta.
-/** Mengekspor toBusinessEndOfDay untuk kebutuhan modul ini. */
+/** Ubah date key bisnis menjadi Date akhir hari dengan offset Jakarta. */
 export const toBusinessEndOfDay = (dateKey: string) => {
   return new Date(`${dateKey}T23:59:59.999${JAKARTA_UTC_OFFSET}`);
 };
 
-// & Compute shift start/end window and handle cross-day end correctly.
-// % Hitung rentang mulai/akhir shift dan tangani akhir shift lintas hari.
-/** Mengekspor getShiftWindow untuk kebutuhan modul ini. */
+/** Hitung rentang mulai/akhir shift dan tangani akhir shift lintas hari. */
 export const getShiftWindow = (
   now: Date,
   shift: { startTime: string; endTime: string; isCrossDay: boolean },
