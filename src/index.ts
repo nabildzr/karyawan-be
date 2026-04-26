@@ -6,8 +6,9 @@ import { cors } from "@elysiajs/cors";
 import { Elysia } from "elysia";
 import { attendanceCronPlugin } from "./app/jobs/attendanceCron";
 import { pointsCronPlugin } from "./app/jobs/pointsJobs";
-import { server_v1 } from "./server";
 import { redisPlugin } from "./config/redis";
+import { initHelpdeskBroker } from "./modules/helpdesk/helpdesk.broker";
+import { server_v1 } from "./server";
 
 const PORT = Bun.env.PORT || 3000;
 
@@ -29,6 +30,9 @@ const app = new Elysia()
   .use(server_v1)
   .use(attendanceCronPlugin)
   .use(pointsCronPlugin)
+  .onStart(async () => {
+    await initHelpdeskBroker();
+  })
 
   // Start server
   .listen(PORT);
