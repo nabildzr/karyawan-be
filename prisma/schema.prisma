@@ -78,6 +78,11 @@ model Users {
   // % Relasi untuk sistem notifikasi
   notifications Notifications[]
   pushSubscriptions PushSubscriptions[]
+
+  // & Ticketing relations
+  reportedTickets  Tickets[]         @relation("TicketReporter")
+  operatedTickets  Tickets[]         @relation("TicketOperator")
+  ticketResponses  TicketResponses[] @relation("TicketResponder")
 }
 
 // & Gamification models for badges and points.
@@ -621,4 +626,77 @@ model UserTokens {
   
   @@index([userId, status])
   @@index([expiresAt])
+}
+
+// ──────────────────────────────────────────────────────────────
+// & TICKETING SYSTEM
+// % Sistem manajemen tiket helpdesk
+// ──────────────────────────────────────────────────────────────
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+model Tickets {
+  id          String         @id @default(uuid())
+  reporterId  String
+  reporter    Users          @relation("TicketReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  operatorId  String?
+  operator    Users?         @relation("TicketOperator", fields: [operatorId], references: [id], onDelete: SetNull)
+
+  subject     String
+  description String         @db.Text
+  autoReplyText String?      @db.Text
+
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus   @default(OPEN)
+
+  firstResponseAt DateTime?
+  closedAt        DateTime?
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  responses         TicketResponses[]
+  satisfactionRating SatisfactionRatings?
+
+  @@index([reporterId, status])
+  @@index([operatorId, status])
+  @@index([status, priority])
+}
+
+model TicketResponses {
+  id          String   @id @default(uuid())
+  ticketId    String
+  ticket      Tickets  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  responderId String
+  responder   Users    @relation("TicketResponder", fields: [responderId], references: [id], onDelete: Cascade)
+
+  message     String   @db.Text
+  isAutoReply Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+model SatisfactionRatings {
+  id        String   @id @default(uuid())
+  ticketId  String   @unique
+  ticket    Tickets  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  score     Int      // 1-5
+  feedback  String?  @db.Text
+
+  createdAt DateTime @default(now())
 }

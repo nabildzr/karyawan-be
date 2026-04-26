@@ -63,7 +63,7 @@ const NON_WORKING_DAYS = new Set<string>(["Saturday", "Sunday"]);
 
 // & Default and helper for configurable employee seed volume.
 // % Default dan helper untuk jumlah data karyawan seed yang bisa dikonfigurasi.
-const DEFAULT_TOTAL_EMPLOYEE_SEED = 20;
+const DEFAULT_TOTAL_EMPLOYEE_SEED = 10000;
 const FIXED_MANAGER_SEED_COUNT = 3;
 
 const parsePositiveInteger = (value: string | undefined, fallback: number) => {
@@ -254,6 +254,20 @@ const RBAC_RESOURCE_SEEDS = [
     supportsApprove: false,
   },
   {
+    key: "helpdesk_operator",
+    name: "Helpdesk Operator",
+    routePath: "/admin/helpdesk",
+    groupName: "Helpdesk",
+    supportsApprove: false,
+  },
+  {
+    key: "helpdesk_dashboard",
+    name: "Helpdesk Dashboard",
+    routePath: "/admin/helpdesk/dashboard",
+    groupName: "Helpdesk",
+    supportsApprove: false,
+  },
+  {
     key: "employee_home",
     name: "Portal Karyawan - Beranda",
     routePath: "/karyawan",
@@ -295,6 +309,13 @@ const RBAC_RESOURCE_SEEDS = [
     groupName: "Portal Karyawan",
     supportsApprove: false,
   },
+  {
+    key: "employee_helpdesk",
+    name: "Portal Karyawan - Helpdesk",
+    routePath: "/karyawan/helpdesk",
+    groupName: "Portal Karyawan",
+    supportsApprove: false,
+  },
 ] as const;
 
 // & Default role-to-resource grants for non-super-admin roles.
@@ -306,6 +327,8 @@ const ROLE_PERMISSION_SEEDS: Record<
   >
 > = {
   ADMIN: {
+    helpdesk_operator: [...CRUD_ACTIONS],
+    helpdesk_dashboard: [PermissionAction.READ],
     points: [...CRUD_ACTIONS],
     points_dashboard: [PermissionAction.READ],
     points_rules: [...CRUD_ACTIONS],
@@ -332,12 +355,15 @@ const ROLE_PERMISSION_SEEDS: Record<
     points_marketplace: [PermissionAction.READ],
     points_logs: [PermissionAction.READ],
     points_leaderboard: [PermissionAction.READ],
+    helpdesk_operator: [PermissionAction.READ],
+    helpdesk_dashboard: [PermissionAction.READ],
     employee_home: [PermissionAction.READ],
     employee_attendance: [PermissionAction.READ],
     employee_submissions: [PermissionAction.READ],
     employee_schedule: [PermissionAction.READ],
     employee_account: [PermissionAction.READ],
     employee_wallet: [PermissionAction.READ],
+    employee_helpdesk: [PermissionAction.READ],
   },
   HR: {
     dashboard: [PermissionAction.READ],
@@ -371,12 +397,15 @@ const ROLE_PERMISSION_SEEDS: Record<
     points_marketplace: [...CRUD_ACTIONS],
     points_logs: [PermissionAction.READ],
     points_leaderboard: [PermissionAction.READ],
+    helpdesk_operator: [...CRUD_ACTIONS],
+    helpdesk_dashboard: [PermissionAction.READ],
     employee_home: [PermissionAction.READ],
     employee_attendance: [PermissionAction.READ],
     employee_submissions: [PermissionAction.READ],
     employee_schedule: [PermissionAction.READ],
     employee_account: [PermissionAction.READ],
     employee_wallet: [PermissionAction.READ],
+    employee_helpdesk: [PermissionAction.READ],
     rbac: [PermissionAction.READ],
   },
   MANAGER: {
@@ -393,12 +422,15 @@ const ROLE_PERMISSION_SEEDS: Record<
     points_dashboard: [PermissionAction.READ],
     points_logs: [PermissionAction.READ],
     points_leaderboard: [PermissionAction.READ],
+    helpdesk_operator: [PermissionAction.READ, PermissionAction.UPDATE],
+    helpdesk_dashboard: [PermissionAction.READ],
     employee_home: [PermissionAction.READ],
     employee_attendance: [PermissionAction.READ],
     employee_submissions: [PermissionAction.READ],
     employee_schedule: [PermissionAction.READ],
     employee_account: [PermissionAction.READ],
     employee_wallet: [PermissionAction.READ],
+    employee_helpdesk: [PermissionAction.READ],
   },
   USER: {
     employee_home: [PermissionAction.READ],
@@ -415,6 +447,11 @@ const ROLE_PERMISSION_SEEDS: Record<
     employee_schedule: [PermissionAction.READ],
     employee_account: [PermissionAction.READ, PermissionAction.UPDATE],
     employee_wallet: [PermissionAction.READ, PermissionAction.CREATE],
+    employee_helpdesk: [
+      PermissionAction.CREATE,
+      PermissionAction.READ,
+      PermissionAction.UPDATE,
+    ],
   },
 };
 
@@ -429,6 +466,7 @@ async function seedRbacResourcesAndPermissions() {
   >();
 
   for (const resource of RBAC_RESOURCE_SEEDS) {
+    // gabung update & create
     const upserted = await prisma.permissionResources.upsert({
       where: { key: resource.key },
       update: {

@@ -16,6 +16,8 @@ import { divisionRoutes } from "./modules/divisions/divisions.route";
 import { employeeRoutes } from "./modules/employees/employees.route";
 import { faceRoutes } from "./modules/faces/faces.route";
 import { geofenceRoutes } from "./modules/geofences/geofences.route";
+import { helpdeskRoutes } from "./modules/helpdesk/helpdesk.route";
+import { helpdeskWsRoute } from "./modules/helpdesk/helpdesk.ws";
 import { holidayRoutes } from "./modules/holidays/holidays.route";
 import { notificationRoutes } from "./modules/notifications/notifications.route";
 import { pointsRoutes } from "./modules/points/points.route";
@@ -63,6 +65,8 @@ server_v1
   .use(assessmentsRoutes)
   .use(rbacRoutes)
   .use(notificationRoutes)
+  .use(helpdeskRoutes)
+  .use(helpdeskWsRoute)
 
   // & Expose interactive Swagger documentation for API inspection.
   // % Tampilkan dokumentasi Swagger interaktif untuk inspeksi API.

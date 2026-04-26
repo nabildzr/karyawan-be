@@ -32,7 +32,7 @@ const EmployeeDetailsInputDTO = t.Omit(EmployeeDetailsPlain, [
 /** Mengekspor EmployeeListQueryDTO untuk kebutuhan modul ini. */
 export const EmployeeListQueryDTO = t.Object({
   page: t.Optional(t.Number({ default: 1, minimum: 1 })),
-  limit: t.Optional(t.Number({ default: 10, minimum: 1, maximum: 100 })),
+  limit: t.Optional(t.Number({ default: 10, minimum: 1, maximum: 10000 })),
   search: t.Optional(t.String({ description: "Cari by nama, NIP, atau email" })),
   positionId: t.Optional(t.String()),
   divisionId: t.Optional(t.String()),
